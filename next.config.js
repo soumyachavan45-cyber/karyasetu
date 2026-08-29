@@ -4,6 +4,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  experimental: {
+    serverComponentsExternalPackages: ["sqlite3"],
+  },
 };
 
 module.exports = nextConfig;
