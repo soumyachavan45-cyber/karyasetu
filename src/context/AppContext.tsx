@@ -11,16 +11,21 @@ import {
 } from "@/data/mockData";
 import { Language, translations } from "@/data/translations";
 
-export type ActiveTab = "customer" | "worker" | "admin" | "map";
+export type ActiveTab = "customer" | "worker" | "map" | "account";
 export type AppSection = "landing" | "login" | "app";
-export type UserRole = "citizen" | "artisan" | "admin";
+export type UserRole = "citizen" | "artisan";
 
 export interface CurrentUser {
   role: UserRole;
   name: string;
   phone: string;
+  email?: string;
+  city?: string;
+  address?: string;
   uan?: string;
   societyName?: string;
+  upiId?: string;
+  aadhaarVerified?: boolean;
 }
 
 export interface ToastMessage {
@@ -36,6 +41,7 @@ interface AppContextType {
   setAppSection: (section: AppSection) => void;
   currentUser: CurrentUser | null;
   setCurrentUser: (user: CurrentUser | null) => void;
+  updateUserProfile: (profile: Partial<CurrentUser>) => void;
   loginUser: (role: UserRole) => void;
   logoutUser: () => void;
   activeTab: ActiveTab;
@@ -60,13 +66,9 @@ interface AppContextType {
   declineJob: (bookingId: string) => void;
   verifyJobOtp: (bookingId: string, enteredOtp: string) => Promise<boolean>;
   completeJob: (bookingId: string) => Promise<void>;
-  matchOfflineWorker: (bookingId: string, workerId: string) => Promise<void>;
   activeBookingModalService: ServiceCategory | null;
   openBookingModal: (service: ServiceCategory) => void;
   closeBookingModal: () => void;
-  activePrintTicketBooking: Booking | null;
-  openPrintTicketModal: (booking: Booking) => void;
-  closePrintTicketModal: () => void;
   isPricingModalOpen: boolean;
   setIsPricingModalOpen: (open: boolean) => void;
   isVoiceModalOpen: boolean;
@@ -96,17 +98,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     role: "citizen",
     name: "Vikas Deshpande",
     phone: "+91 98220 11902",
+    email: "vikas.deshpande@gmail.com",
+    city: "Mumbai",
+    address: "Dadar West, Mumbai",
+    aadhaarVerified: true,
   });
   const [activeTab, setActiveTab] = useState<ActiveTab>("customer");
   const [language, setLanguage] = useState<Language>("en");
-  const [selectedCity, setSelectedCity] = useState("Nagpur, MH");
+  const [selectedCity, setSelectedCity] = useState("Mumbai, Maharashtra");
   const [services, setServices] = useState<ServiceCategory[]>(SERVICE_CATEGORIES);
   const [workers, setWorkers] = useState<Worker[]>(MOCK_WORKERS);
   const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
-  const [currentWorker, setCurrentWorker] = useState<Worker>(MOCK_WORKERS[0]); // Ramesh Kumar
+  const [currentWorker, setCurrentWorker] = useState<Worker>(MOCK_WORKERS[0]); // Vidya Deshmukh / Ramesh
   const [incomingJobAlert, setIncomingJobAlert] = useState<Booking | null>(null);
   const [activeBookingModalService, setActiveBookingModalService] = useState<ServiceCategory | null>(null);
-  const [activePrintTicketBooking, setActivePrintTicketBooking] = useState<Booking | null>(null);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [outdoorMode, setOutdoorMode] = useState(false);
@@ -122,33 +127,40 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         role: "citizen",
         name: "Vikas Deshpande",
         phone: "+91 98220 11902",
+        email: "vikas.deshpande@gmail.com",
+        city: "Mumbai",
+        address: "Dadar West, Mumbai",
+        aadhaarVerified: true,
       });
       setActiveTab("customer");
-    } else if (role === "artisan") {
-      setCurrentUser({
-        role: "artisan",
-        name: "Ramesh Kumar",
-        phone: "+91 98231 44012",
-        uan: "UAN-8890-4412-9901",
-        societyName: "Nagpur Central Labour Co-op (NLCF-78)",
-      });
-      setActiveTab("worker");
     } else {
       setCurrentUser({
-        role: "admin",
-        name: "Nagpur District Federation Hub",
-        phone: "+91 71225 10920",
-        societyName: "Nagpur Central District Labour Cooperative Federation Ltd.",
+        role: "artisan",
+        name: "Vidya Deshmukh",
+        phone: "+91 98221 55012",
+        email: "vidya.crafts@nlcf.org",
+        city: "Mumbai",
+        address: "Dadar, Mumbai",
+        uan: "UAN-8890-5012-9901",
+        societyName: "Maa Sharda Mahila Cooperative Federation",
+        upiId: "vidya.shg@upi",
+        aadhaarVerified: true,
       });
-      setActiveTab("admin");
+      setCurrentWorker(MOCK_WORKERS[0]);
+      setActiveTab("worker");
     }
     setAppSection("app");
+  };
+
+  const updateUserProfile = (profile: Partial<CurrentUser>) => {
+    setCurrentUser((prev) => (prev ? { ...prev, ...profile } : null));
+    addToast("Profile Updated", "Your account information has been saved.", "success");
   };
 
   const logoutUser = () => {
     setCurrentUser(null);
     setAppSection("landing");
-    addToast("Logged Out", "Returned to KaryaSetu landing portal.", "info");
+    addToast("Logged Out", "Returned to KaryaSetu home portal.", "info");
   };
 
   // Toast Helper
@@ -520,8 +532,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const openBookingModal = (service: ServiceCategory) => setActiveBookingModalService(service);
   const closeBookingModal = () => setActiveBookingModalService(null);
-  const openPrintTicketModal = (booking: Booking) => setActivePrintTicketBooking(booking);
-  const closePrintTicketModal = () => setActivePrintTicketBooking(null);
+
 
   // Financial Split Metrics aggregate
   const financialMetrics = bookings.reduce(
@@ -570,6 +581,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setAppSection,
         currentUser,
         setCurrentUser,
+        updateUserProfile,
         loginUser,
         logoutUser,
         activeTab,
@@ -591,13 +603,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         declineJob,
         verifyJobOtp,
         completeJob,
-        matchOfflineWorker,
         activeBookingModalService,
         openBookingModal,
         closeBookingModal,
-        activePrintTicketBooking,
-        openPrintTicketModal,
-        closePrintTicketModal,
         isPricingModalOpen,
         setIsPricingModalOpen,
         isVoiceModalOpen,
@@ -624,3 +632,4 @@ export const useApp = () => {
   if (!context) throw new Error("useApp must be used within an AppProvider");
   return context;
 };
+

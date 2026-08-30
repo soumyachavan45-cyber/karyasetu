@@ -6,8 +6,8 @@ import { LandingPage } from "@/components/LandingPage";
 import { LoginPage } from "@/components/LoginPage";
 import { ConsumerView } from "@/components/ConsumerView";
 import { WorkerMobileView } from "@/components/WorkerMobileView";
-import { AdminHubView } from "@/components/AdminHubView";
 import { LiveMapView } from "@/components/LiveMapView";
+import { AccountView } from "@/components/AccountView";
 
 export default function HomePage() {
   const { appSection, setAppSection, activeTab, loginUser } = useApp();
@@ -15,7 +15,9 @@ export default function HomePage() {
   if (appSection === "landing") {
     return (
       <LandingPage
-        onGetStarted={() => setAppSection("app")}
+        onGetStarted={() => {
+          loginUser("citizen");
+        }}
         onLogin={() => setAppSection("login")}
       />
     );
@@ -34,8 +36,9 @@ export default function HomePage() {
     <div className="w-full">
       {activeTab === "customer" && <ConsumerView />}
       {activeTab === "worker" && <WorkerMobileView />}
-      {activeTab === "admin" && <AdminHubView />}
       {activeTab === "map" && <LiveMapView />}
+      {activeTab === "account" && <AccountView />}
     </div>
   );
 }
+

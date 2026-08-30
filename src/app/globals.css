@@ -4,110 +4,152 @@
 
 @layer base {
   :root {
-    --canvas: #0B0B0C;
-    --card: #121314;
-    --card-inner: #161719;
-    --emerald-glow: #10B981;
+    --canvas: #EAF3FD;
+    --card: #FFFFFF;
+    --card-inner: #F8FAFC;
+    --primary-blue: #2563EB;
+    --primary-green: #1E8449;
+    --accent-orange: #E67E22;
   }
 
   body {
-    background-color: #0B0B0C;
-    color: #F3F4F6;
+    background-color: #E2EEFC;
+    color: #1E293B;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
-    selection-background-color: #10B981;
-    selection-color: #0B0B0C;
+    min-height: 100vh;
+    selection-background-color: #2563EB;
+    selection-color: #FFFFFF;
   }
 }
 
-/* Custom glowing and ambient utilities */
-.glow-emerald {
-  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.35), 0 0 10px -2px rgba(16, 185, 129, 0.2);
+/* Full-Screen Fixed India Map Ambient Background Layer */
+.fixed-india-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: url('/images/bg-india-map.jpg');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  z-index: -50;
+  pointer-events: none;
+  opacity: 0.88;
 }
 
-.glow-emerald-sm {
-  box-shadow: 0 0 12px -2px rgba(16, 185, 129, 0.4);
+/* Glassmorphism Classes (Frosted glass allowing subtle map glow through) */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08), 0 2px 6px 0 rgba(0, 0, 0, 0.02);
 }
 
-.glow-saffron {
-  box-shadow: 0 0 20px -5px rgba(245, 158, 11, 0.3);
-}
-
-.bg-radial-ambient {
-  background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, rgba(11, 11, 12, 0) 70%);
-}
-
-.bg-radial-card {
-  background: radial-gradient(circle at top right, rgba(16, 185, 129, 0.06) 0%, rgba(18, 19, 20, 0.95) 100%);
+.glass-panel-subtle {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
 }
 
 .glass-nav {
-  background: rgba(11, 11, 12, 0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
 .glass-card {
-  background: rgba(18, 19, 20, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 24px -2px rgba(15, 23, 42, 0.07);
 }
 
-/* High contrast outdoor mode for workers in sunlight */
+/* Tactile Glossy Button Styles with Subtle Gradients and Shadows */
+.btn-glossy-blue {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 12px rgba(37, 99, 235, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #FFFFFF;
+}
+.btn-glossy-blue:hover {
+  background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 50%, #2563EB 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 6px 18px rgba(37, 99, 235, 0.4);
+}
+
+.btn-glossy-green {
+  background: linear-gradient(135deg, #2ECC71 0%, #1E8449 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 12px rgba(30, 132, 73, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #FFFFFF;
+}
+.btn-glossy-green:hover {
+  background: linear-gradient(135deg, #4ADE80 0%, #22C55E 50%, #16A34A 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 6px 18px rgba(30, 132, 73, 0.4);
+}
+
+.btn-glossy-orange {
+  background: linear-gradient(135deg, #F39C12 0%, #E67E22 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 12px rgba(230, 126, 34, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #FFFFFF;
+}
+.btn-glossy-orange:hover {
+  background: linear-gradient(135deg, #F5B041 0%, #F39C12 50%, #E67E22 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 6px 18px rgba(230, 126, 34, 0.4);
+}
+
+/* Golden Pulse for India Map Pins */
+.golden-pin {
+  background: radial-gradient(circle, #F1C40F 0%, #E67E22 80%);
+  box-shadow: 0 0 16px rgba(241, 196, 15, 0.9), 0 0 30px rgba(230, 126, 34, 0.6);
+}
+
+/* Ambient Sky Gradient Backdrop */
+.bg-sky-ambient {
+  background: radial-gradient(circle at 50% 15%, rgba(186, 224, 253, 0.5) 0%, rgba(240, 246, 255, 0) 70%);
+}
+
+/* Outdoor Mode for Sunlight Visibility */
 .outdoor-mode {
-  background-color: #000000 !important;
-  color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  color: #000000 !important;
 }
-
 .outdoor-mode .outdoor-card {
-  background-color: #111111 !important;
-  border: 2px solid #10B981 !important;
+  background: #F8FAFC !important;
+  border: 3px solid #16A34A !important;
 }
 
-.outdoor-mode .outdoor-text {
-  color: #FFFFFF !important;
-  font-weight: 700 !important;
-}
-
-/* Custom scrollbar */
+/* Custom light scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #0B0B0C;
+  background: rgba(241, 245, 249, 0.6);
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #27272A;
+  background: #CBD5E1;
   border-radius: 9999px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #10B981;
+  background: #94A3B8;
 }
 
-/* Print Styles for Physical Job Ticket */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #printable-job-ticket, #printable-job-ticket * {
-    visibility: visible;
-  }
-  #printable-job-ticket {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    background: #FFFFFF !important;
-    color: #000000 !important;
-    padding: 20px;
-  }
-  .no-print {
-    display: none !important;
-  }
+/* Leaflet map styles */
+.leaflet-container {
+  font-family: inherit !important;
 }
+.custom-leaflet-marker {
+  background: transparent !important;
+  border: none !important;
+}
+

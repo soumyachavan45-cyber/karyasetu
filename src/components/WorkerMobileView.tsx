@@ -13,15 +13,15 @@ import {
   Zap,
   Lock,
   Sun,
-  Moon,
   Volume2,
   Navigation,
   Sparkles,
   Phone,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
   Radio,
+  BadgeIndianRupee,
+  Award,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import confetti from "canvas-confetti";
@@ -39,13 +39,10 @@ export const WorkerMobileView: React.FC = () => {
     setIsVoiceModalOpen,
     language,
     t,
-    outdoorMode,
-    setOutdoorMode,
     speakText,
   } = useApp();
 
   const [otpInput, setOtpInput] = useState("");
-  const [activeJobStep, setActiveJobStep] = useState<"alert" | "in_transit" | "working" | "done">("alert");
 
   // Find if current worker has an active job in progress
   const activeJob = bookings.find(
@@ -56,343 +53,281 @@ export const WorkerMobileView: React.FC = () => {
 
   const handleAccept = async (bookingId: string) => {
     await acceptJob(bookingId);
-    setActiveJobStep("in_transit");
   };
 
   const handleVerifyOtp = async (bookingId: string) => {
+    if (!otpInput) return;
     const success = await verifyJobOtp(bookingId, otpInput);
     if (success) {
-      setActiveJobStep("working");
+      setOtpInput("");
     }
   };
 
-  const handleCompleteJob = async (bookingId: string) => {
+  const handleComplete = async (bookingId: string) => {
     await completeJob(bookingId);
-    setActiveJobStep("done");
-
-    // Trigger celebration confetti
     try {
       confetti({
         particleCount: 80,
         spread: 70,
         origin: { y: 0.6 },
       });
-    } catch (e) {
-      // safe fallback
-    }
+    } catch (e) {}
   };
 
   return (
-    <div
-      className={`min-h-[calc(100vh-4rem)] flex flex-col items-center justify-start p-4 sm:p-6 transition-colors duration-300 ${
-        outdoorMode ? "outdoor-mode bg-black" : "bg-[#0B0B0C]"
-      }`}
-    >
-      {/* Top Banner with Controls */}
-      <div className="w-full max-w-sm mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-          <Smartphone className="w-4 h-4 text-emerald-400" />
-          <span className="font-bold text-white">Artisan Mobile Web Portal</span>
-        </div>
+    <div className="w-full min-h-screen bg-transparent text-slate-900 pb-24 pt-6 font-sans">
+      <div className="max-w-md mx-auto px-4 space-y-5">
 
-        {/* Outdoor High-Contrast Sun Mode Toggle */}
-        <button
-          onClick={() => setOutdoorMode(!outdoorMode)}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-            outdoorMode
-              ? "bg-white text-black font-bold"
-              : "bg-[#161719] text-zinc-300 border border-white/10 hover:border-emerald-500/40"
-          }`}
-          title="Toggle High Contrast Low-Glare Outdoor Mode for Bright Sunlight"
-        >
-          {outdoorMode ? (
-            <>
-              <Sun className="w-3.5 h-3.5 fill-black" />
-              <span>Sun Mode (Active)</span>
-            </>
-          ) : (
-            <>
-              <Sun className="w-3.5 h-3.5 text-amber-400" />
-              <span>Outdoor Mode</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* MOBILE PHONE CHASSIS WRAPPER */}
-      <div
-        className={`relative w-full max-w-sm rounded-[36px] p-4 shadow-2xl border ${
-          outdoorMode
-            ? "bg-black border-2 border-emerald-500 shadow-emerald-500/20"
-            : "bg-[#121314] border-white/10 shadow-2xl shadow-black/90"
-        } flex flex-col space-y-4 pb-20`}
-      >
-        {/* Notch / Status Bar */}
-        <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 px-2">
-          <span>09:41 AM</span>
-          <div className="w-20 h-4 rounded-full bg-black border border-white/5 mx-auto" />
-          <div className="flex items-center gap-1.5">
-            <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span className="text-emerald-400 font-bold">5G • NCD</span>
-          </div>
-        </div>
-
-        {/* 1. WORKER PROFILE HEADER */}
-        <div
-          className={`p-3.5 rounded-2xl ${
-            outdoorMode ? "bg-[#111111] border border-white/20" : "bg-[#161719] border border-white/5"
-          } flex items-center justify-between`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <img
-                src={currentWorker.photoUrl}
-                alt={currentWorker.name}
-                className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500/60 shadow"
-              />
-              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#161719] animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-bold text-white">
-                  {language === "hi"
-                    ? currentWorker.nameHi
-                    : language === "mr"
-                    ? currentWorker.nameMr
-                    : currentWorker.name}
-                </h3>
-                <span className="text-[10px] font-mono text-zinc-400">
-                  {currentWorker.workerId}
-                </span>
+        
+        {/* WORKER SMARTPHONE CHASSIS HEADER */}
+        <div className="glass-panel p-5 rounded-3xl border border-white shadow-glass space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img
+                  src={currentWorker.photoUrl}
+                  alt={currentWorker.name}
+                  className="w-12 h-12 rounded-2xl object-cover border-2 border-white shadow-sm"
+                />
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                    currentWorker.status === "available"
+                      ? "bg-emerald-500"
+                      : currentWorker.status === "busy"
+                      ? "bg-amber-500"
+                      : "bg-slate-400"
+                  }`}
+                />
               </div>
-              <p className="text-xs text-emerald-400 font-medium">
-                {language === "hi"
-                  ? currentWorker.tradeHi
-                  : language === "mr"
-                  ? currentWorker.tradeMr
-                  : currentWorker.trade}
-              </p>
-              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-zinc-400">
-                <span className="flex items-center gap-0.5 text-amber-400 font-bold">
-                  <Star className="w-3 h-3 fill-amber-400" /> {currentWorker.rating}
-                </span>
-                <span>•</span>
-                <span>{currentWorker.totalJobs} Jobs</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Duty Mode Switch */}
-          <div className="flex flex-col items-end gap-1">
-            <button
-              onClick={() =>
-                updateWorkerStatus(
-                  currentWorker.id,
-                  currentWorker.status === "available" ? "offline" : "available"
-                )
-              }
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight transition-all ${
-                currentWorker.status === "available"
-                  ? "bg-emerald-500 text-black shadow-md shadow-emerald-500/30"
-                  : "bg-zinc-800 text-zinc-400 border border-white/10"
-              }`}
-            >
-              {currentWorker.status === "available" ? "📶 Active" : "⏸ Offline"}
-            </button>
-            <span className="text-[9px] font-mono text-zinc-500">ISRO Radar</span>
-          </div>
-        </div>
-
-        {/* 2. MAIN ALERT BOX / CURRENT JOB SUMMARY */}
-        {incomingJobAlert && !activeJob && (
-          <div
-            className={`p-4 rounded-2xl border-2 animate-in slide-in-from-top-2 ${
-              outdoorMode
-                ? "bg-[#151515] border-emerald-400 shadow-xl"
-                : "bg-gradient-to-b from-emerald-950/40 to-[#121314] border-emerald-500/60 shadow-2xl shadow-emerald-500/20"
-            } space-y-3.5`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-black animate-pulse">
-                <span className="w-1.5 h-1.5 rounded-full bg-black" />
-                {t.newJobRequest}
-              </span>
-              <span className="text-[10px] font-mono text-zinc-400">
-                {incomingJobAlert.timestamp}
-              </span>
-            </div>
-
-            <div className="space-y-1.5 text-xs">
-              <div className="flex items-start gap-2 text-zinc-300">
-                <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold text-white">{incomingJobAlert.area}</span>
-                  <span className="text-[10px] text-zinc-400 block">
-                    (Distance: 2.1 km away • Dighori Hub)
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h2 className="font-extrabold text-slate-900 text-sm sm:text-base">
+                    {currentWorker.name}
+                  </h2>
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    ★ {currentWorker.rating}
                   </span>
                 </div>
-              </div>
-
-              <div className="flex items-start gap-2 text-zinc-300 pt-1">
-                <Zap className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-white font-medium">{incomingJobAlert.serviceName}</span>
-                  <p className="text-[10px] text-zinc-400">{incomingJobAlert.notes}</p>
-                </div>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  {currentWorker.trade} • {currentWorker.experienceYears} Yrs Exp
+                </p>
               </div>
             </div>
 
-            {/* Payout to wallet highlight */}
-            <div className="p-2.5 rounded-xl bg-[#0B0B0C] border border-emerald-500/30 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-zinc-400 block font-mono">
-                  {t.payoutToWallet}
-                </span>
-                <span className="text-base font-black font-mono text-emerald-400">
-                  {formatINR(incomingJobAlert.workerPayout)}
-                </span>
+            {/* Voice Assistant Mic Button */}
+            <button
+              onClick={() => setIsVoiceModalOpen(true)}
+              className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 flex items-center justify-center transition-colors shadow-sm"
+              title="Voice Assistant (Bhashini AI)"
+            >
+              <Mic className="w-5 h-5 animate-pulse text-emerald-600" />
+            </button>
+          </div>
+
+          {/* Status Toggle Bar */}
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs">
+            {(["available", "busy", "offline"] as const).map((st) => (
+              <button
+                key={st}
+                onClick={() => updateWorkerStatus(currentWorker.id, st)}
+                className={`py-1.5 rounded-xl font-bold text-[11px] capitalize transition-all ${
+                  currentWorker.status === st
+                    ? st === "available"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : st === "busy"
+                      ? "bg-amber-500 text-white shadow-sm"
+                      : "bg-slate-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
+
+
+          {/* e-Shram & Sovereign Badges */}
+          <div className="flex items-center justify-between pt-1 text-[11px] text-slate-600">
+            <span className="flex items-center gap-1 font-mono font-semibold text-slate-700">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{currentWorker.uanNumber || currentWorker.eShramCardNo}</span>
+            </span>
+            <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              Aadhaar e-KYC
+            </span>
+          </div>
+        </div>
+
+
+        {/* EARNINGS SUMMARY CARDS */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="glass-panel p-4 rounded-3xl border border-white shadow-card-soft space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              Today's Take-Home
+            </span>
+            <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
+              ₹{currentWorker.todayEarnings}
+            </div>
+            <span className="text-[10px] text-emerald-600 font-semibold block">
+              92% Direct UPI Payout
+            </span>
+          </div>
+
+          <div className="glass-panel p-4 rounded-3xl border border-white shadow-card-soft space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              e-Shram Pension Locked
+            </span>
+            <div className="text-xl sm:text-2xl font-black text-blue-600 font-mono">
+              ₹{currentWorker.todayWelfareSaved}
+            </div>
+            <span className="text-[10px] text-blue-600 font-semibold block">
+              PMSBY + Retirement Trust
+            </span>
+          </div>
+        </div>
+
+        {/* INCOMING LEAD POPUP / ALERT */}
+        {incomingJobAlert && !activeJob && (
+          <div className="glass-panel p-5 rounded-3xl border-2 border-blue-400 bg-white/95 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping" />
+                <strong className="text-sm font-extrabold text-slate-900">
+                  New Direct Booking Alert!
+                </strong>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                92% Instant UPI
+              <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                1.2 km away
               </span>
             </div>
 
-            {/* Oversized Big Hit Area Action Buttons */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <strong className="text-slate-900 font-bold">{incomingJobAlert.serviceName}</strong>
+                <span className="text-sm font-black text-slate-900 font-mono">
+                  ₹{incomingJobAlert.baseAmount}
+                </span>
+              </div>
+              <p className="text-slate-600 flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>{incomingJobAlert.area}</span>
+              </p>
+              <p className="text-slate-500 text-[11px]">
+                Citizen: {incomingJobAlert.customerName}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => declineJob(incomingJobAlert.id)}
-                className="py-3 rounded-xl text-xs font-bold bg-rose-950/40 text-rose-300 border border-rose-500/40 hover:bg-rose-900/60 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                className="py-2.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
               >
-                <X className="w-4 h-4" />
-                <span>{t.decline}</span>
+                Pass
               </button>
-
               <button
                 onClick={() => handleAccept(incomingJobAlert.id)}
-                className="py-3 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-400 text-black hover:from-emerald-400 hover:to-teal-300 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/30"
+                className="py-2.5 rounded-xl font-bold text-xs btn-glossy-green text-white shadow-md transition-all active:scale-95 flex items-center justify-center gap-1"
               >
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>{t.accept}</span>
+                <Check className="w-4 h-4" />
+                <span>Accept Job</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* ACTIVE IN-TRANSIT & WORK IN PROGRESS COMPONENT */}
+        {/* ACTIVE JOB EXECUTION CARD */}
         {activeJob && (
-          <div className="p-4 rounded-2xl bg-[#161719] border border-emerald-500/50 space-y-3.5 animate-in fade-in">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-                <Navigation className="w-4 h-4 animate-bounce text-emerald-400" />
-                {activeJob.status === "in_transit" ? "En-Route to Customer" : "Job In Progress ⚡"}
+          <div className="glass-panel p-5 rounded-3xl border-2 border-emerald-400 bg-white/95 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-emerald-700 tracking-wider block">
+                  Active Service In Progress
+                </span>
+                <strong className="text-sm font-bold text-slate-900">
+                  {activeJob.serviceName}
+                </strong>
+              </div>
+              <span className="text-base font-black text-slate-900 font-mono">
+                ₹{activeJob.baseAmount}
               </span>
-              <span className="text-[10px] font-mono text-zinc-400">{activeJob.id}</span>
             </div>
 
-            <div className="p-3 bg-[#121314] rounded-xl border border-white/5 space-y-1 text-xs">
-              <p className="font-bold text-white">{activeJob.customerName}</p>
-              <p className="text-zinc-400 text-[11px]">{activeJob.area}</p>
-              <div className="flex items-center justify-between pt-1 text-[11px]">
-                <span className="text-emerald-400 font-mono">
-                  Wallet Payout: {formatINR(activeJob.workerPayout)}
-                </span>
-                <a
-                  href={`tel:${activeJob.customerPhone}`}
-                  className="flex items-center gap-1 text-zinc-300 hover:text-white px-2 py-0.5 rounded bg-white/5"
-                >
-                  <Phone className="w-3 h-3 text-emerald-400" /> Call
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between text-slate-600">
+                <span>Customer:</span>
+                <strong className="text-slate-900">{activeJob.customerName}</strong>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span>Location:</span>
+                <span className="text-slate-900 font-medium">{activeJob.area}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span>Phone:</span>
+                <a href={`tel:${activeJob.customerPhone}`} className="text-blue-600 font-mono font-bold hover:underline">
+                  {activeJob.customerPhone}
                 </a>
               </div>
             </div>
 
-            {/* If In Transit: Require OTP to start */}
+            {/* Step 1: OTP Verification */}
             {activeJob.status === "in_transit" && (
-              <div className="space-y-2">
-                <label className="block text-[11px] font-semibold text-zinc-300">
-                  Ask Customer for 4-Digit Security OTP:
-                </label>
-                <div className="flex gap-2">
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <span className="text-xs font-semibold text-slate-700 block">
+                  Ask customer for 4-digit start OTP:
+                </span>
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
                     maxLength={4}
                     value={otpInput}
                     onChange={(e) => setOtpInput(e.target.value)}
-                    placeholder="e.g. 4921"
-                    className="flex-1 bg-[#121314] border border-white/20 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-white focus:outline-none focus:border-emerald-500"
+                    placeholder="Enter 4-digit OTP"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 text-center font-mono font-bold tracking-widest text-sm focus:outline-none focus:border-emerald-600 shadow-inner"
                   />
                   <button
                     onClick={() => handleVerifyOtp(activeJob.id)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 text-black hover:bg-emerald-400 active:scale-95 transition-all"
+                    className="px-4 py-2 rounded-xl font-bold text-xs btn-glossy-blue text-white shrink-0 shadow-md"
                   >
-                    Verify & Start
+                    Verify
                   </button>
                 </div>
               </div>
             )}
 
-            {/* If Working: Complete Job button */}
+            {/* Step 2: Complete Service */}
             {activeJob.status === "otp_verified" && (
-              <div className="space-y-2 pt-1">
-                <div className="p-2 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-[11px] text-emerald-300 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Aadhaar OTP Verified. Work in progress.</span>
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>OTP Verified! Work is in progress.</span>
                 </div>
                 <button
-                  onClick={() => handleCompleteJob(activeJob.id)}
-                  className="w-full py-3 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-400 text-black hover:from-emerald-400 hover:to-teal-300 shadow-xl shadow-emerald-500/30 active:scale-95 transition-all"
+                  onClick={() => handleComplete(activeJob.id)}
+                  className="w-full py-3 rounded-xl font-bold text-xs btn-glossy-green text-white shadow-md active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
-                  ✅ Work Completed (Settle ₹{activeJob.workerPayout} via UPI)
+                  <Check className="w-4 h-4" />
+                  <span>Mark Work Completed & Collect ₹{activeJob.baseAmount}</span>
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* 3. QUICK WALLET & WELFARE BREAKDOWN */}
-        <div
-          className={`p-4 rounded-2xl ${
-            outdoorMode ? "bg-[#111111] border border-white/20" : "bg-[#161719] border border-white/5"
-          } space-y-3`}
-        >
-          <div className="flex items-center justify-between pb-2 border-b border-white/5">
-            <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-emerald-400" />
-              {t.todaysEarnings}
-            </span>
-            <span className="text-base font-black font-mono text-white">
-              {formatINR(currentWorker.todayEarnings)}
+        {/* COOPERATIVE TOOL LIBRARY CARD */}
+        <div className="glass-panel p-5 rounded-3xl border border-white shadow-glass space-y-3 text-xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <h3 className="font-bold text-slate-900 flex items-center gap-2">
+              <span>🛠️ Primary Co-op Tool Library</span>
+            </h3>
+            <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
+              Free Access
             </span>
           </div>
 
-          {/* e-Shram Social Security Status Card */}
-          <div className="p-3 rounded-xl bg-gradient-to-r from-blue-950/40 to-emerald-950/40 border border-blue-500/30 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider flex items-center gap-1">
-                <Lock className="w-3 h-3 text-blue-400" />
-                {t.socialSecurityStatus}
-              </span>
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500 text-black font-mono">
-                {t.fullySecured}
-              </span>
-            </div>
-            <p className="text-[10px] text-zinc-300 leading-snug">
-              ₹{currentWorker.todayWelfareSaved} {t.allocatedToday} (PMSBY & Ayushman Bharat).
-            </p>
-          </div>
-        </div>
-
-        {/* 4. FLOATING BHASHINI AI VOICE BUTTON */}
-        <div className="pt-2">
-          <button
-            onClick={() => setIsVoiceModalOpen(true)}
-            className="w-full group py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 text-black font-bold text-xs flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 active:scale-95 transition-all"
-          >
-            <Mic className="w-4 h-4 fill-black group-hover:animate-bounce" />
-            <span>{t.tapToSpeak}</span>
-          </button>
-          <span className="text-[10px] text-zinc-500 text-center block mt-1 font-mono">
-            "माझे पुढचे काम कुठे आहे?" / "अगला काम बताओ"
-          </span>
+          <p className="text-slate-600 leading-relaxed">
+            Borrow heavy power tools (rotary drills, drain snakes, multimeter testers) from your local Labour Felicitation Centre (LFC) with zero security deposit.
+          </p>
         </div>
       </div>
     </div>

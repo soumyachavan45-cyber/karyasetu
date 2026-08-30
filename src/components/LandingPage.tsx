@@ -1,526 +1,335 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { KaryaSetuLogo } from "@/components/KaryaSetuLogo";
 import {
   ShieldCheck,
-  Zap,
-  ArrowRight,
   Sparkles,
-  Smartphone,
-  Building2,
-  Lock,
-  Globe,
-  Map,
-  BadgeIndianRupee,
-  Scale,
-  Users,
+  MapPin,
   CheckCircle2,
-  Printer,
+  Users,
+  Star,
+  Globe,
+  ChevronRight,
+  ArrowRight,
   TrendingUp,
   HeartHandshake,
+  BadgeIndianRupee,
   Layers,
-  PhoneCall,
-  Mic,
-  Star,
+  Phone,
+  Home,
+  Briefcase,
 } from "lucide-react";
-import { formatINR } from "@/lib/utils";
+import { INDIA_CITIES, MOCK_WORKERS } from "@/data/mockData";
 
-export const LandingPage: React.FC<{ onGetStarted: () => void; onLogin: () => void }> = ({
-  onGetStarted,
-  onLogin,
-}) => {
-  const { setActiveTab, language, setLanguage, setIsPricingModalOpen } = useApp();
+export const LandingPage: React.FC<{
+  onGetStarted: () => void;
+  onLogin: () => void;
+}> = ({ onGetStarted, onLogin }) => {
+  const {
+    setActiveTab,
+    loginUser,
+    language,
+    setLanguage,
+    selectedCity,
+    setSelectedCity,
+    setIsPricingModalOpen,
+  } = useApp();
+
+  const [hoveredCity, setHoveredCity] = useState<string | null>(null);
+
+  const handleSelectRole = (role: "worker" | "consumer") => {
+    if (role === "worker") {
+      loginUser("artisan");
+      setActiveTab("worker");
+    } else {
+      loginUser("citizen");
+      setActiveTab("customer");
+    }
+    onGetStarted();
+  };
+
+  // 3 Testimonials from reference image
+  const testimonials = [
+    {
+      name: "Vidya",
+      state: "Maharashtra",
+      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
+      quote: "KaryaSetu has changed my life. I earn better and feel respected.",
+      role: "SHG Artisan",
+    },
+    {
+      name: "Rajesh",
+      state: "Uttar Pradesh",
+      image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80",
+      quote: "I have job security and fair pay now. It's been a blessing!",
+      role: "Master Electrician",
+    },
+    {
+      name: "Latha",
+      state: "Tamil Nadu",
+      image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
+      quote: "Through KaryaSetu, I can support my family with pride.",
+      role: "Organic Milk Lead",
+    },
+  ];
+
+  // Key city pins for the India Map section
+  const mapPins = [
+    { name: "Delhi NCR", state: "Delhi", top: "28%", left: "42%", count: "4,200+ Artisans" },
+    { name: "Jaipur", state: "Rajasthan", top: "34%", left: "33%", count: "1,850+ Artisans" },
+    { name: "Lucknow", state: "Uttar Pradesh", top: "33%", left: "54%", count: "2,300+ Artisans" },
+    { name: "Patna", state: "Bihar", top: "38%", left: "67%", count: "1,680+ Artisans" },
+    { name: "Guwahati", state: "Assam", top: "34%", left: "84%", count: "940+ Artisans" },
+    { name: "Kolkata", state: "West Bengal", top: "46%", left: "74%", count: "3,400+ Artisans" },
+    { name: "Ahmedabad", state: "Gujarat", top: "43%", left: "26%", count: "2,100+ Artisans" },
+    { name: "Mumbai", state: "Maharashtra", top: "54%", left: "28%", count: "2,840+ Artisans" },
+    { name: "Pune", state: "Maharashtra", region: "West", top: "59%", left: "32%", count: "1,950+ Artisans" },
+    { name: "Hyderabad", state: "Telangana", top: "62%", left: "47%", count: "2,950+ Artisans" },
+    { name: "Bengaluru", state: "Karnataka", top: "72%", left: "40%", count: "3,900+ Artisans" },
+    { name: "Chennai", state: "Tamil Nadu", top: "74%", left: "50%", count: "3,100+ Artisans" },
+    { name: "Kochi", state: "Kerala", top: "82%", left: "38%", count: "1,250+ Artisans" },
+  ];
 
   return (
-    <div className="w-full min-h-screen bg-[#0B0B0C] text-zinc-100 selection:bg-emerald-500 selection:text-black">
-      {/* Soft Ambient Radial Backdrop */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-radial-ambient pointer-events-none z-0" />
+    <div className="w-full min-h-screen bg-transparent text-slate-900 relative overflow-hidden font-sans">
+      {/* Atmosphere Sky & Cloud Elements matching reference image */}
 
-      {/* 1. HERO SECTION */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-20 pb-16 space-y-8 text-center">
-        {/* Sovereign Top Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#121314] border border-emerald-500/30 shadow-xl shadow-black/80">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs font-semibold text-zinc-300">
-            National Labour Cooperatives Federation of India (NLCF)
-          </span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-            Sovereign Public Infrastructure
-          </span>
-        </div>
+      <div className="absolute inset-0 pointer-events-none opacity-40 z-0">
+        <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-sky-300/30 to-transparent" />
+        <div className="absolute top-10 left-10 w-72 h-72 rounded-full bg-white/60 blur-3xl" />
+        <div className="absolute top-36 right-20 w-96 h-96 rounded-full bg-sky-200/50 blur-3xl" />
+        {/* Soft horizon trees silhouette at mid-page */}
+        <div className="absolute top-[480px] left-0 right-0 h-48 bg-gradient-to-t from-sky-200/20 via-sky-100/10 to-transparent" />
+      </div>
 
-        {/* Grand Sanskrit Modern Headline */}
-        <div className="space-y-4 max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.12]">
-            Bridging Work, Dignity &{" "}
-            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(16,185,129,0.35)]">
-              Cooperative Power
-            </span>
+      {/* MAIN CONTAINER */}
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-16 flex flex-col items-center text-center">
+        
+        {/* 1. HERO TITLE BLOCK */}
+        <div className="space-y-3 mt-4 sm:mt-6 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/90 border border-blue-200/80 shadow-xs text-xs font-bold text-slate-700">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Sovereign Digital Public Rail for India's Artisans</span>
+          </div>
+
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 leading-[1.15]">
+            Connecting Artisans Directly to{" "}
+            <span className="text-[#E67E22] drop-shadow-xs">Households</span>
           </h1>
-          <p className="text-base sm:text-xl text-zinc-400 max-w-3xl mx-auto leading-relaxed">
-            <strong className="text-white">KaryaSetu (कार्यसेतु)</strong> flips the corporate aggregator model. A decentralized digital public marketplace owned by traditional labor societies—giving <strong className="text-emerald-400">92% direct payouts</strong> to artisans and automated <strong className="text-blue-400">e-Shram social security</strong>.
+          <p className="text-xs sm:text-sm font-semibold text-slate-700 max-w-xl mx-auto">
+            Empowering India's Local Workforce with Fair Minimum Wage Baselines and Social Security.
           </p>
         </div>
 
-        {/* CTA Group */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        {/* 2. DUAL ROLE SELECTION GLASSMORPHIC CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full max-w-xl mt-8 sm:mt-10">
+          {/* Card 1: Worker */}
+          <div className="glass-panel p-5 sm:p-6 rounded-3xl flex flex-col items-center text-center space-y-4 hover:shadow-glass-hover transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100/90 border border-amber-300/80 flex items-center justify-center text-2xl shadow-sm">
+                👷
+              </div>
+              <h2 className="text-lg sm:text-xl font-black text-slate-900">
+                I'm a Worker
+              </h2>
+            </div>
+
+            <p className="text-xs text-slate-700 font-medium leading-relaxed px-2">
+              Receive direct neighborhood job requests, instant 92% UPI payouts, and automated e-Shram accident & pension security.
+            </p>
+
+            <button
+              onClick={() => handleSelectRole("worker")}
+              className="w-full py-3 rounded-2xl text-xs sm:text-sm font-bold btn-glossy-green flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-md"
+            >
+              <span>Find Work</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Card 2: Consumer */}
+          <div className="glass-panel p-5 sm:p-6 rounded-3xl flex flex-col items-center text-center space-y-4 hover:shadow-glass-hover transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-100/90 border border-blue-300/80 flex items-center justify-center text-2xl shadow-sm">
+                🏡
+              </div>
+              <h2 className="text-lg sm:text-xl font-black text-slate-900">
+                I'm a Consumer
+              </h2>
+            </div>
+
+            <p className="text-xs text-slate-700 font-medium leading-relaxed px-2">
+              Book verified local electricians, plumbers, Vedic pandits, fresh farm dairy, and handicrafts with zero surge prices.
+            </p>
+
+            <button
+              onClick={() => handleSelectRole("consumer")}
+              className="w-full py-3 rounded-2xl text-xs sm:text-sm font-bold btn-glossy-blue flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-md"
+            >
+              <span>Hire Services</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* 3. INDIA MAP PRESENCE SECTION */}
+        <div className="w-full max-w-2xl mt-12 sm:mt-16 space-y-3">
+          <div className="space-y-1">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Our Presence Across <span className="text-[#E67E22]">India</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 font-semibold">
+              Click any city pin below to instantly filter local artisan networks
+            </p>
+          </div>
+
+          {/* Interactive Map Visual Backdrop with Glowing Golden Pins */}
+          <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[400px] rounded-3xl glass-panel p-4 sm:p-6 flex items-center justify-center overflow-hidden border border-white shadow-glass my-4">
+            
+            {/* India Map Stylized SVG silhouette */}
+            <svg
+              viewBox="0 0 500 560"
+              className="w-full h-full opacity-50 text-blue-400"
+              fill="currentColor"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M190 20 L230 40 L260 70 L230 110 L280 130 L350 140 L420 160 L440 180 L410 210 L370 200 L340 230 L320 280 L350 320 L300 390 L260 490 L240 540 L220 500 L180 410 L160 350 L140 290 L120 240 L110 200 L150 180 L180 130 L160 70 Z" />
+            </svg>
+
+            {/* Glowing Golden Location Pins (#F1C40F with radiant glow) */}
+            {mapPins.map((pin) => {
+              const isSelected = selectedCity.includes(pin.name);
+              return (
+                <div
+                  key={pin.name}
+                  style={{ top: pin.top, left: pin.left }}
+                  onMouseEnter={() => setHoveredCity(pin.name)}
+                  onMouseLeave={() => setHoveredCity(null)}
+                  onClick={() => {
+                    setSelectedCity(`${pin.name}, ${pin.state}`);
+                    handleSelectRole("consumer");
+                  }}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20"
+                >
+                  {/* Glowing Golden Aura */}
+                  <div className="relative flex items-center justify-center">
+                    <span className="w-5 h-5 rounded-full bg-amber-400/50 animate-ping absolute" />
+                    
+                    {/* Golden Pin droplet (#F1C40F) */}
+                    <div className={`w-6 h-6 rounded-full golden-pin flex items-center justify-center border-2 border-white transform transition-transform duration-200 ${
+                      isSelected ? "scale-135 ring-4 ring-amber-300" : "group-hover:scale-125"
+                    }`}>
+                      <div className="w-2 h-2 rounded-full bg-white shadow-xs" />
+                    </div>
+                  </div>
+
+                  {/* City Tooltip on Hover */}
+                  <div className={`absolute bottom-7 left-1/2 -translate-x-1/2 px-2.5 py-1.5 rounded-xl bg-slate-900/95 backdrop-blur-md text-white text-[10px] font-semibold whitespace-nowrap shadow-2xl border border-white/20 transition-all duration-200 pointer-events-none z-30 ${
+                    hoveredCity === pin.name ? "opacity-100 scale-100" : "opacity-0 scale-95"
+                  }`}>
+                    <span className="text-[#F1C40F] font-bold block">{pin.name}, {pin.state}</span>
+                    <span className="text-[9px] text-slate-300">{pin.count} • Click to View</span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Active Selected City Ticker */}
+            <div className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-3 px-3 py-1.5 rounded-2xl bg-white/90 backdrop-blur-md border border-slate-200 text-[11px] font-bold text-slate-800 shadow-sm flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Selected: <strong className="text-blue-600">{selectedCity}</strong> • 28,400+ Active Gigs</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. ARTISAN TESTIMONIALS (3 Glassmorphism Cards) */}
+        <div className="w-full max-w-3xl mt-8 sm:mt-12 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {testimonials.map((t) => (
+              <div
+                key={t.name}
+                className="glass-panel p-4 sm:p-5 rounded-3xl flex flex-col items-center text-center space-y-3 hover:shadow-glass-hover transition-all duration-300"
+              >
+                {/* Profile Avatar */}
+                <div className="relative">
+                  <img
+                    src={t.image}
+                    alt={t.name}
+                    className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md"
+                  />
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center">
+                    <CheckCircle2 className="w-3 h-3 text-white" />
+                  </div>
+                </div>
+
+                {/* Name & Region */}
+                <div className="leading-tight">
+                  <h3 className="text-sm font-bold text-slate-900">{t.name}</h3>
+                  <span className="text-[11px] font-medium text-slate-500">{t.state} • {t.role}</span>
+                </div>
+
+                {/* Quote */}
+                <p className="text-xs text-slate-700 italic leading-relaxed pt-1">
+                  "{t.quote}"
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 5. GRAND GLOSSY "JOIN NOW" BUTTON */}
+        <div className="w-full max-w-sm mt-8 sm:mt-10">
           <button
-            onClick={onGetStarted}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 text-black hover:from-emerald-400 hover:to-teal-300 transition-all shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 group active:scale-95"
+            onClick={() => handleSelectRole("consumer")}
+            className="w-full py-3.5 sm:py-4 rounded-2xl text-base sm:text-lg font-extrabold btn-glossy-orange shadow-md flex items-center justify-center gap-2 group transition-all duration-200 active:scale-95"
           >
-            <Sparkles className="w-4 h-4 fill-black group-hover:rotate-12 transition-transform" />
-            <span>Launch KaryaSetu Marketplace</span>
+            <span>Join Now</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
-
-          <button
-            onClick={onLogin}
-            className="w-full sm:w-auto px-6 py-3.5 rounded-2xl text-sm font-semibold bg-[#121314] text-white border border-white/10 hover:border-emerald-500/40 hover:bg-[#161719] transition-all flex items-center justify-center gap-2"
-          >
-            <Lock className="w-4 h-4 text-emerald-400" />
-            <span>Role-Based Portal Login (Citizen • Worker • Admin)</span>
-          </button>
         </div>
 
-        {/* Value Trust Badges */}
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-4 text-xs text-zinc-400">
-          <span className="flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" /> 100% Aadhaar e-KYC Certified
-          </span>
+
+        {/* 6. TRANSPARENCY & VALUE PROPOSITIONS */}
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-10 text-xs font-semibold text-slate-600">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>Aadhaar & NCD Verified</span>
+          </div>
           <span>•</span>
-          <span className="flex items-center gap-1.5">
-            <BadgeIndianRupee className="w-4 h-4 text-emerald-400" /> 92% Direct Bank Transfer (UPI)
-          </span>
+          <div className="flex items-center gap-1.5">
+            <BadgeIndianRupee className="w-4 h-4 text-blue-600" />
+            <span>92% Direct Worker Payout</span>
+          </div>
           <span>•</span>
-          <span className="flex items-center gap-1.5">
-            <Scale className="w-4 h-4 text-emerald-400" /> State Minimum Wage Board Aligned
-          </span>
-          <span>•</span>
-          <span className="flex items-center gap-1.5">
-            <Printer className="w-4 h-4 text-emerald-400" /> Phygital LFC Physical Job Cards
-          </span>
-        </div>
-      </section>
-
-      {/* 2. REAL-TIME SOVEREIGN PLATFORM METRICS TICKER */}
-      <section className="border-y border-white/10 bg-[#121314]/80 backdrop-blur-md py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            <div className="space-y-1">
-              <span className="text-2xl sm:text-4xl font-black font-mono text-emerald-400">
-                414+
-              </span>
-              <p className="text-xs text-zinc-400 uppercase tracking-wider font-mono">
-                Primary Labour Cooperatives
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-2xl sm:text-4xl font-black font-mono text-white">
-                92.0%
-              </span>
-              <p className="text-xs text-zinc-400 uppercase tracking-wider font-mono">
-                Direct Worker Payout Rail
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-2xl sm:text-4xl font-black font-mono text-cyan-400">
-                28,400+
-              </span>
-              <p className="text-xs text-zinc-400 uppercase tracking-wider font-mono">
-                Aadhaar & NCD Verified Artisans
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-2xl sm:text-4xl font-black font-mono text-amber-400">
-                ₹94.5 L+
-              </span>
-              <p className="text-xs text-zinc-400 uppercase tracking-wider font-mono">
-                e-Shram Social Security Locked
-              </p>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <HeartHandshake className="w-4 h-4 text-emerald-600" />
+            <span>6% e-Shram Pension & Insurance</span>
           </div>
         </div>
-      </section>
 
-      {/* 3. STRUCTURAL COMPARISON (Venture Capital vs. KaryaSetu Cooperative) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-12">
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            A SOVEREIGN PARADIGM SHIFT
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Corporate Aggregators vs. KaryaSetu
-          </h2>
-          <p className="text-sm text-zinc-400 leading-relaxed">
-            Private gig platforms trap blue-collar workers with exorbitant commission cuts and opaque algorithms. KaryaSetu returns platform ownership to India's traditional labor societies.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Card 1: Corporate Platforms */}
-          <div className="p-8 rounded-3xl bg-[#121314] border border-rose-500/20 shadow-2xl relative space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 font-bold text-sm">
-                  ✕
-                </div>
-                <h3 className="text-lg font-bold text-rose-300">
-                  Private Aggregators (e.g. Urban Company)
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/30">
-                PROFIT EXTRACTION
-              </span>
-            </div>
-
-            <ul className="space-y-4 text-xs text-zinc-300">
-              <li className="flex items-start gap-3">
-                <span className="text-rose-400 font-bold text-sm mt-0.5">✘</span>
-                <div>
-                  <strong className="text-white block">Massive Commissions (20% – 35%):</strong>
-                  Workers lose up to a third of every hard-earned rupee to corporate shareholders.
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-rose-400 font-bold text-sm mt-0.5">✘</span>
-                <div>
-                  <strong className="text-white block">No Safety Nets or Pensions:</strong>
-                  Zero statutory contributions to accident insurance or old-age security funds.
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-rose-400 font-bold text-sm mt-0.5">✘</span>
-                <div>
-                  <strong className="text-white block">Sudden Surge Price Gouging:</strong>
-                  Opaque algorithmic price spikes that exploit customers during emergencies.
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-rose-400 font-bold text-sm mt-0.5">✘</span>
-                <div>
-                  <strong className="text-white block">Exclusion of Non-Smartphone Artisans:</strong>
-                  Older master carpenters and plumbers without modern smartphones are locked out.
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          {/* Card 2: KaryaSetu Model */}
-          <div className="p-8 rounded-3xl bg-gradient-to-b from-[#121314] via-[#121314] to-emerald-950/20 border-2 border-emerald-500/50 shadow-2xl shadow-emerald-500/10 relative space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-sm">
-                  ✓
-                </div>
-                <h3 className="text-lg font-bold text-emerald-300">
-                  KaryaSetu (Cooperative Digital Public Rail)
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
-                DEMOCRATIC OWNERSHIP
-              </span>
-            </div>
-
-            <ul className="space-y-4 text-xs text-zinc-200">
-              <li className="flex items-start gap-3">
-                <span className="text-emerald-400 font-bold text-sm mt-0.5">✓</span>
-                <div>
-                  <strong className="text-white block">92.0% Direct Take-Home Wage:</strong>
-                  Instant UPI settlement straight to the artisan's bank account with zero middleman deductions.
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-emerald-400 font-bold text-sm mt-0.5">✓</span>
-                <div>
-                  <strong className="text-white block">Automated e-Shram Welfare (6%):</strong>
-                  Direct compliance with India's Code on Social Security 2020 (PMSBY + Ayushman Bharat).
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-emerald-400 font-bold text-sm mt-0.5">✓</span>
-                <div>
-                  <strong className="text-white block">Fair Pre-Fixed Wage Baselines:</strong>
-                  Prices strictly aligned with State Labour Minimum Wage Boards without hidden surge fees.
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-emerald-400 font-bold text-sm mt-0.5">✓</span>
-                <div>
-                  <strong className="text-white block">Phygital Labour Felicitation Centres (LFC):</strong>
-                  Local physical cooperative hubs register offline artisans and print physical work sheets.
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. THE 4 SOVEREIGN INDIAN TECH RAILS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20">
-            SOVEREIGN DIGITAL INFRASTRUCTURE
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Built on India's Open Tech Stack
-          </h2>
-          <p className="text-sm text-zinc-400">
-            No reliance on proprietary foreign monopolies. KaryaSetu connects into national digital public infrastructure.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Rail 1 */}
-          <div className="p-6 rounded-2xl bg-[#121314] border border-white/5 hover:border-emerald-500/40 transition-all space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <h3 className="text-base font-bold text-white">Aadhaar & NCD e-KYC</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Instant background checks, trade guild certifications, and verified cooperative membership records.
-            </p>
-          </div>
-
-          {/* Rail 2 */}
-          <div className="p-6 rounded-2xl bg-[#121314] border border-white/5 hover:border-emerald-500/40 transition-all space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <Map className="w-5 h-5" />
-            </div>
-            <h3 className="text-base font-bold text-white">ISRO Bhuvan Mapping</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              India's sovereign satellite mapping for hyper-local worker tracking and duty geofencing without costly APIs.
-            </p>
-          </div>
-
-          {/* Rail 3 */}
-          <div className="p-6 rounded-2xl bg-[#121314] border border-white/5 hover:border-emerald-500/40 transition-all space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-              <Globe className="w-5 h-5" />
-            </div>
-            <h3 className="text-base font-bold text-white">ONDC & Beckn Protocol</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Enables citizens to discover and book certified cooperative artisans through everyday buyer apps.
-            </p>
-          </div>
-
-          {/* Rail 4 */}
-          <div className="p-6 rounded-2xl bg-[#121314] border border-white/5 hover:border-emerald-500/40 transition-all space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
-              <Mic className="w-5 h-5" />
-            </div>
-            <h3 className="text-base font-bold text-white">Bhashini Multilingual AI</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Voice-first speech commands in Hindi, Marathi, and Tamil so smartphone artisans never struggle with typing.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. INTERACTIVE 3-TIER ECOSYSTEM PREVIEW */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            THE 3-TIER APPLICATION ECOSYSTEM
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Designed for Every Stakeholder
-          </h2>
-          <p className="text-sm text-zinc-400">
-            Experience the three distinct interfaces tailored for households, artisans, and federation managers.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Consumer Card */}
-          <div
-            onClick={() => {
-              setActiveTab("customer");
-              onGetStarted();
-            }}
-            className="p-6 rounded-3xl bg-[#121314] border border-white/10 hover:border-emerald-500/50 hover:shadow-2xl transition-all cursor-pointer group space-y-4"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-              🛒
-            </div>
-            <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
-              1. Consumer Marketplace
-            </h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              3-click booking for Electricians, Plumbers, AC Repair, Vedic Pandits, Farm Produce & SHG Crafts with upfront flat wages.
-            </p>
-            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-              Enter Marketplace →
-            </span>
-          </div>
-
-          {/* Worker Card */}
-          <div
-            onClick={() => {
-              setActiveTab("worker");
-              onGetStarted();
-            }}
-            className="p-6 rounded-3xl bg-[#121314] border border-white/10 hover:border-emerald-500/50 hover:shadow-2xl transition-all cursor-pointer group space-y-4"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-              📱
-            </div>
-            <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
-              2. Worker Mobile App View
-            </h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Outdoor low-glare sun mode, oversized `[ACCEPT]` buttons, Bhashini AI voice actions, and live e-Shram pension tracker.
-            </p>
-            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-              View Artisan Interface →
-            </span>
-          </div>
-
-          {/* Admin Hub Card */}
-          <div
-            onClick={() => {
-              setActiveTab("admin");
-              onGetStarted();
-            }}
-            className="p-6 rounded-3xl bg-[#121314] border border-white/10 hover:border-emerald-500/50 hover:shadow-2xl transition-all cursor-pointer group space-y-4"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-              🏢
-            </div>
-            <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
-              3. Co-op Federation Admin Hub
-            </h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Labour Felicitation Centre (LFC) desk to match offline artisans, print physical job sheets, and track Bhuvan geofences.
-            </p>
-            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-              Open Admin Dashboard →
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. VOICES FROM THE COOPERATIVE GUILDS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-8">
-        <div className="text-center max-w-2xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Voices from India's Artisans
-          </h2>
-          <p className="text-xs text-zinc-400 mt-1">
-            Real stories from cooperative members across Maharashtra.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-6 rounded-2xl bg-[#121314] border border-white/5 space-y-3">
-            <div className="flex items-center gap-1 text-amber-400 text-xs">
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-            </div>
-            <p className="text-xs text-zinc-300 italic leading-relaxed">
-              "On private apps, ₹300 out of every ₹1,000 job went to the company. On KaryaSetu, I take home ₹920 straight to my bank via UPI, and ₹60 automatically builds my e-Shram accident and retirement fund."
-            </p>
-            <div>
-              <h4 className="text-xs font-bold text-white">Ramesh Kumar</h4>
-              <span className="text-[10px] text-emerald-400 font-mono">
-                Electrician, Nagpur Central Labour Co-op (NLCF-78)
-              </span>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#121314] border border-white/5 space-y-3">
-            <div className="flex items-center gap-1 text-amber-400 text-xs">
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-            </div>
-            <p className="text-xs text-zinc-300 italic leading-relaxed">
-              "I don't have a smartphone. Every morning I walk into the Sitabuldi LFC office. The manager prints out my job card and hands me my cash vouchers upon completion. KaryaSetu treats us like dignity co-owners."
-            </p>
-            <div>
-              <h4 className="text-xs font-bold text-white">Bhikaji Shinde</h4>
-              <span className="text-[10px] text-cyan-400 font-mono">
-                Senior Carpenter, Sitabuldi Shramik Sanstha
-              </span>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#121314] border border-white/5 space-y-3">
-            <div className="flex items-center gap-1 text-amber-400 text-xs">
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400" />
-            </div>
-            <p className="text-xs text-zinc-300 italic leading-relaxed">
-              "Our women's self-help group now delivers fresh A2 cow milk and handloom crafts directly to city households without middleman commissions. The ONDC gateway gives us incredible volume."
-            </p>
-            <div>
-              <h4 className="text-xs font-bold text-white">Anjali Tayade</h4>
-              <span className="text-[10px] text-purple-400 font-mono">
-                SHG Lead, Maa Sharda Mahila Krishi Sanstha
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. GRAND BOTTOM CTA BANNER */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="p-8 sm:p-14 rounded-3xl bg-gradient-to-br from-emerald-950/50 via-[#121314] to-teal-950/40 border border-emerald-500/40 shadow-2xl text-center space-y-6 relative overflow-hidden">
-          <div className="space-y-2">
-            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-              Ready to Experience Fair Work in India?
-            </h2>
-            <p className="text-sm sm:text-base text-zinc-400 max-w-xl mx-auto">
-              Join thousands of certified artisans and households on India's sovereign cooperative platform.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        {/* 7. FOOTER LINKS */}
+        <footer className="w-full mt-12 pt-6 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <p>© 2026 KaryaSetu (कार्यसेतु) • National Labour Cooperatives Federation of India (NLCF)</p>
+          <div className="flex items-center gap-4 font-medium">
             <button
-              onClick={onGetStarted}
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl text-sm font-bold bg-emerald-500 text-black hover:bg-emerald-400 transition-all shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 active:scale-95"
+              onClick={() => setIsPricingModalOpen(true)}
+              className="hover:text-blue-600 transition-colors"
             >
-              <span>Explore Live Marketplace</span>
-              <ArrowRight className="w-4 h-4" />
+              Privacy Policy
             </button>
-
+            <span>•</span>
             <button
-              onClick={onLogin}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl text-sm font-semibold bg-[#161719] text-white border border-white/10 hover:border-emerald-500/40 transition-colors"
+              onClick={() => setIsPricingModalOpen(true)}
+              className="hover:text-blue-600 transition-colors"
             >
-              <span>Login to Your Portal</span>
+              Terms of Service
             </button>
           </div>
-        </div>
-      </section>
-
-      {/* 8. FOOTER */}
-      <footer className="border-t border-white/10 py-8 bg-[#0B0B0C]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
-          <KaryaSetuLogo size="sm" showTagline={false} />
-          <p>© 2026 KaryaSetu (कार्यसेतु) • National Labour Cooperatives Federation of India (NLCF). All rights reserved.</p>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsPricingModalOpen(true)} className="hover:text-white">
-              Code on Social Security 2020
-            </button>
-            <button onClick={onLogin} className="hover:text-emerald-400">
-              Cooperative Portal Login
-            </button>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 };
+

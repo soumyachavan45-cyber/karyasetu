@@ -4,12 +4,12 @@ import { AppProvider } from "@/context/AppContext";
 import { Navbar } from "@/components/Navbar";
 import { ToastContainer } from "@/components/ToastContainer";
 import { JobBookingModal } from "@/components/JobBookingModal";
-import { PhysicalJobTicketModal } from "@/components/PhysicalJobTicketModal";
 import { VoiceAssistantModal } from "@/components/VoiceAssistantModal";
 import { PricingMatrixModal } from "@/components/PricingMatrixModal";
+import { BottomNav } from "@/components/BottomNav";
 
 export const metadata: Metadata = {
-  title: "KaryaSetu 🇮🇳 | कार्यसेतु - India's Sovereign Cooperative Workforce Platform",
+  title: "KaryaSetu 🇮🇳 | कार्यसेतु - Connecting Artisans Directly to Households",
   description:
     "A decentralized, state-backed, cooperative-owned digital public marketplace that formalizes India's blue-collar workforce with 92% direct payouts and automated e-Shram social security.",
 };
@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         {/* Leaflet CSS */}
         <link
@@ -37,17 +37,22 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[#0B0B0C] text-zinc-100 min-h-screen antialiased">
+      <body className="bg-transparent text-slate-900 min-h-screen antialiased">
         <AppProvider>
+          {/* Full-Screen Fixed India Map Atmospheric Background */}
+          <div className="fixed-india-bg" aria-hidden="true" />
+          
           <Navbar />
           <main className="min-h-[calc(100vh-4rem)]">{children}</main>
+          <BottomNav />
           <ToastContainer />
           <JobBookingModal />
-          <PhysicalJobTicketModal />
           <VoiceAssistantModal />
           <PricingMatrixModal />
         </AppProvider>
       </body>
+
     </html>
   );
 }
+

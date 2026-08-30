@@ -2,30 +2,26 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { useApp } from "@/context/AppContext";
-import { Worker, ServiceCategory } from "@/data/mockData";
+import { Worker } from "@/data/mockData";
+import { INDIA_CITIES } from "@/data/mockData";
 import {
   MapPin,
-  Navigation,
   ShieldCheck,
   Star,
   Zap,
   Phone,
   CheckCircle2,
-  Clock,
-  Filter,
-  Truck,
-  Layers,
   Sparkles,
+  Layers,
+  Award,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 
 export const LiveMapView: React.FC = () => {
-  const { workers, services, openBookingModal, selectedCity, language } = useApp();
+  const { workers, services, openBookingModal, selectedCity, setSelectedCity, language } = useApp();
 
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(workers[0]);
   const [activeFilter, setActiveFilter] = useState<string>("all");
-  const [mapZoom, setMapZoom] = useState(13);
-  const [deliveryProgress, setDeliveryProgress] = useState(35);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -35,310 +31,220 @@ export const LiveMapView: React.FC = () => {
     if (activeFilter === "all") return true;
     if (activeFilter === "available") return w.status === "available";
     if (activeFilter === "busy") return w.status === "busy";
-    if (activeFilter === "trades") return w.trade.toLowerCase().includes("electric") || w.trade.toLowerCase().includes("plumb") || w.trade.toLowerCase().includes("carpent");
-    if (activeFilter === "commerce") return w.trade.toLowerCase().includes("farm") || w.trade.toLowerCase().includes("shg");
     return true;
   });
-
-  // Simulated moving delivery truck
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDeliveryProgress((prev) => (prev >= 95 ? 10 : prev + 2));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Initialize Leaflet map dynamically
   useEffect(() => {
     if (typeof window === "undefined" || !mapContainerRef.current) return;
 
-    // Load Leaflet CSS and JS dynamically if not already loaded
+    let isMounted = true;
+
     const initLeaflet = async () => {
       const L = (await import("leaflet")).default;
 
-      // Center around Nagpur coordinates
-      const centerLat = 21.1458;
-      const centerLng = 79.0882;
+      if (!isMounted || !mapContainerRef.current) return;
 
-      if (!leafletMapRef.current && mapContainerRef.current) {
+      // Find current selected city coordinates or fallback to Center of India (Nagpur/Mumbai)
+      const currentCityObj = INDIA_CITIES.find((c) => selectedCity.includes(c.name)) || INDIA_CITIES[0];
+      const centerLat = currentCityObj.lat || 19.0760;
+      const centerLng = currentCityObj.lng || 72.8777;
+
+      if (!leafletMapRef.current) {
+        // Destroy any leftover instance
+        const container = mapContainerRef.current as any;
+        if (container._leaflet_id) {
+          container._leaflet_id = null;
+        }
+
         const map = L.map(mapContainerRef.current, {
           center: [centerLat, centerLng],
-          zoom: 13,
-          zoomControl: false,
+          zoom: 11,
+          zoomControl: true,
         });
 
-        // Add Dark Theme CartoDB Tiles (matches #0B0B0C Cyberpunk Dark theme)
-        L.tileLayer(
-          "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png",
-          {
-            attribution: '&copy; <a href="https://bhuvan.nrsc.gov.in/">ISRO Bhuvan / NLCF</a> &copy; OpenStreetMap',
-            maxZoom: 19,
-            subdomains: "abcd",
-          }
-        ).addTo(map);
-
-        L.control.zoom({ position: "bottomright" }).addTo(map);
+        // CartoDB Voyager Light map tiles
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+          attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+          subdomains: "abcd",
+          maxZoom: 19,
+        }).addTo(map);
 
         leafletMapRef.current = map;
+      } else {
+        leafletMapRef.current.setView([centerLat, centerLng], 11);
       }
 
       const map = leafletMapRef.current;
-      if (!map) return;
 
-      // Clear existing markers
-      markersRef.current.forEach((m) => map.removeLayer(m));
+      // Clear previous markers
+      markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
 
-      // Add worker markers with custom glowing HTML icons
-      filteredWorkers.forEach((w) => {
-        const isSelected = selectedWorker?.id === w.id;
-        const colorClass =
-          w.status === "available"
-            ? "bg-emerald-500 text-black shadow-emerald-500/50"
-            : w.status === "busy"
-            ? "bg-amber-500 text-black shadow-amber-500/50"
-            : "bg-zinc-600 text-white";
-
-        const iconHtml = `
-          <div class="relative group cursor-pointer">
-            <div class="w-9 h-9 rounded-full ${colorClass} flex items-center justify-center font-bold text-xs shadow-lg border-2 ${
-          isSelected ? "border-white scale-125" : "border-black"
-        } transition-transform">
-              ${w.trade.includes("Electric") ? "⚡" : w.trade.includes("Plumb") ? "🚰" : w.trade.includes("Purohit") ? "🪕" : w.trade.includes("SHG") || w.trade.includes("Farm") ? "🥛" : w.trade.includes("Solar") ? "📹" : "🪵"}
+      // Add City Hub Markers for all major Indian cities
+      INDIA_CITIES.forEach((city) => {
+        const cityIcon = L.divIcon({
+          className: "custom-city-marker",
+          html: `
+            <div style="background:#2563EB; color:white; padding:4px 8px; border-radius:12px; font-size:10px; font-weight:800; border:2px solid white; box-shadow:0 4px 10px rgba(37,99,235,0.3); white-space:nowrap; display:flex; align-items:center; gap:4px;">
+              <span>📍 ${city.name}</span>
+              <span style="background:rgba(255,255,255,0.25); padding:1px 4px; border-radius:8px; font-size:9px;">${city.activeArtisans}</span>
             </div>
-            ${
-              w.status === "available"
-                ? '<div class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border border-black animate-ping"></div>'
-                : ""
-            }
-          </div>
-        `;
+          `,
+          iconSize: [80, 24],
+          iconAnchor: [40, 12],
+        });
 
-        const customIcon = L.divIcon({
-          html: iconHtml,
-          className: "custom-leaflet-marker",
+        const m = L.marker([city.lat, city.lng], { icon: cityIcon })
+          .addTo(map)
+          .on("click", () => {
+            setSelectedCity(`${city.name}, ${city.state}`);
+            map.flyTo([city.lat, city.lng], 12);
+          });
+
+        markersRef.current.push(m);
+      });
+
+      // Add Worker Markers
+      filteredWorkers.forEach((worker) => {
+        const isSelected = selectedWorker?.id === worker.id;
+        const iconColor = worker.status === "available" ? "#16A34A" : "#D97706";
+
+        const workerIcon = L.divIcon({
+          className: "custom-worker-marker",
+          html: `
+            <div style="position:relative; width:36px; height:36px; border-radius:50%; border:2.5px solid white; background:${iconColor}; box-shadow:0 4px 14px rgba(0,0,0,0.2); overflow:hidden; cursor:pointer; transform:${isSelected ? "scale(1.2)" : "scale(1)"}; transition:transform 0.2s;">
+              <img src="${worker.photoUrl}" style="width:100%; height:100%; object-fit:cover;" />
+            </div>
+          `,
           iconSize: [36, 36],
           iconAnchor: [18, 18],
         });
 
-        const marker = L.marker([w.currentLocation.lat, w.currentLocation.lng], {
-          icon: customIcon,
-        }).addTo(map);
-
-        marker.on("click", () => {
-          setSelectedWorker(w);
-        });
+        const marker = L.marker([worker.currentLocation.lat, worker.currentLocation.lng], { icon: workerIcon })
+          .addTo(map)
+          .on("click", () => {
+            setSelectedWorker(worker);
+            map.panTo([worker.currentLocation.lat, worker.currentLocation.lng]);
+          });
 
         markersRef.current.push(marker);
       });
-
-      // Add Moving Farm-Produce Delivery Van marker
-      const truckLat = 21.1350 + (deliveryProgress / 100) * 0.025;
-      const truckLng = 79.0600 + (deliveryProgress / 100) * 0.035;
-
-      const truckHtml = `
-        <div class="relative cursor-pointer">
-          <div class="w-10 h-10 rounded-full bg-cyan-500 text-black flex items-center justify-center font-bold text-sm shadow-xl border-2 border-white animate-bounce">
-            🚚
-          </div>
-          <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-black/90 text-[9px] font-bold text-cyan-300 whitespace-nowrap border border-cyan-500/40">
-            A2 Milk Van (En-Route)
-          </div>
-        </div>
-      `;
-
-      const truckIcon = L.divIcon({
-        html: truckHtml,
-        className: "custom-truck-marker",
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-      });
-
-      const truckMarker = L.marker([truckLat, truckLng], { icon: truckIcon }).addTo(map);
-      markersRef.current.push(truckMarker);
     };
 
     initLeaflet();
-  }, [filteredWorkers, selectedWorker, deliveryProgress]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCity, filteredWorkers, selectedWorker]);
 
   return (
-    <div className="relative w-full h-[calc(100vh-4rem)] flex flex-col md:flex-row bg-[#0B0B0C] overflow-hidden">
-      {/* Top Filter Overlay */}
-      <div className="absolute top-4 left-4 right-4 md:right-auto md:w-96 z-20 flex flex-col gap-2 pointer-events-none">
-        <div className="pointer-events-auto p-3 rounded-2xl bg-[#121314]/95 backdrop-blur-xl border border-white/10 shadow-2xl space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <h3 className="text-xs font-bold text-white tracking-wide">
-                ISRO Bhuvan Hyper-Local Radar
-              </h3>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-              {filteredWorkers.length} Active Artisans
-            </span>
-          </div>
+    <div className="relative w-full h-[calc(100vh-4rem)] bg-slate-100 overflow-hidden font-sans">
+      {/* Leaflet Map Canvas */}
+      <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-          {/* Quick Filter Buttons */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
-            {[
-              { id: "all", label: "All" },
-              { id: "available", label: "🟢 Available Now" },
-              { id: "busy", label: "🟡 On Duty" },
-              { id: "trades", label: "⚡ Trades" },
-              { id: "commerce", label: "🥛 SHG / Farm" },
-            ].map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setActiveFilter(f.id)}
-                className={`px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition-colors ${
-                  activeFilter === f.id
-                    ? "bg-emerald-500 text-black font-semibold shadow-sm"
-                    : "bg-[#161719] text-zinc-400 hover:text-white border border-white/5"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+      {/* Top Floating Filter Bar */}
+      <div className="absolute top-4 left-4 right-4 sm:left-6 sm:right-auto z-10 flex flex-wrap items-center gap-2">
+        <div className="glass-panel px-3.5 py-2 rounded-2xl border border-white/90 shadow-glass flex items-center gap-2 text-xs font-bold text-slate-800">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>India-Wide Artisan Presence</span>
+          <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full font-mono font-bold">
+            {INDIA_CITIES.length} Cities Active
+          </span>
         </div>
 
-        {/* Legend */}
-        <div className="pointer-events-auto px-3 py-1.5 rounded-xl bg-[#121314]/90 backdrop-blur-lg border border-white/5 text-[10px] text-zinc-300 flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" /> Available (Instant Book)
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-amber-400" /> Serving Customer
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-cyan-400" /> Moving Produce
-          </span>
+        <div className="glass-panel p-1 rounded-2xl border border-white/90 shadow-glass flex items-center gap-1 text-xs">
+          {[
+            { id: "all", label: "All Active" },
+            { id: "available", label: "Ready to Dispatch 🟢" },
+            { id: "busy", label: "On Job 🟠" },
+          ].map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setActiveFilter(f.id)}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs ${
+                activeFilter === f.id
+                  ? "btn-glossy-blue text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Map Canvas */}
-      <div className="flex-1 w-full h-full relative" ref={mapContainerRef}>
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 opacity-0">
-          <span className="text-zinc-600 font-mono text-xs">Loading Bhuvan Satellite Feed...</span>
-        </div>
-      </div>
-
-      {/* Right / Bottom Selected Worker Inspector Card */}
+      {/* Bottom Floating Worker Profile Card */}
       {selectedWorker && (
-        <div className="w-full md:w-96 p-4 bg-[#121314] border-t md:border-t-0 md:border-l border-white/10 flex flex-col justify-between overflow-y-auto max-h-[45vh] md:max-h-full z-20 shadow-2xl">
-          <div className="space-y-4">
+        <div className="absolute bottom-6 left-4 right-4 sm:left-6 sm:max-w-md z-10 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="glass-panel p-5 rounded-3xl border border-white/95 shadow-2xl bg-white/95 backdrop-blur-xl space-y-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <img
                   src={selectedWorker.photoUrl}
                   alt={selectedWorker.name}
-                  className="w-12 h-12 rounded-xl object-cover border border-emerald-500/40 shadow-md"
+                  className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md"
                 />
                 <div>
-                  <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-                    <span>{selectedWorker.name}</span>
-                    <span className="text-[10px] font-mono text-zinc-400">
-                      ({selectedWorker.workerId})
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-extrabold text-slate-900 text-base">
+                      {selectedWorker.name}
+                    </h3>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800">
+                      ★ {selectedWorker.rating}
                     </span>
-                  </h4>
-                  <p className="text-xs text-emerald-400 font-medium">{selectedWorker.trade}</p>
-                  <p className="text-[10px] text-zinc-400 flex items-center gap-1 mt-0.5">
-                    <MapPin className="w-3 h-3 text-zinc-500" />
-                    {selectedWorker.currentLocation.area}
+                  </div>
+                  <p className="text-xs text-slate-600 font-medium">
+                    {selectedWorker.trade} • {selectedWorker.experienceYears || 8} Years Exp
+                  </p>
+                  <p className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-3 h-3" />
+                    <span>{selectedWorker.currentLocation.area}</span>
                   </p>
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="flex items-center gap-1 text-amber-400 text-xs font-bold justify-end">
-                  <Star className="w-3.5 h-3.5 fill-amber-400" />
-                  <span>{selectedWorker.rating}</span>
-                </div>
-                <span className="text-[10px] text-zinc-400 font-mono">
-                  {selectedWorker.totalJobs} jobs
-                </span>
-              </div>
-            </div>
-
-            {/* Status & Verification Badges */}
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div className="p-2 rounded-lg bg-[#161719] border border-white/5 flex items-center gap-2">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    selectedWorker.status === "available"
-                      ? "bg-emerald-400 animate-pulse"
-                      : "bg-amber-400"
-                  }`}
-                />
-                <span className="capitalize text-zinc-200 font-medium">
-                  {selectedWorker.status === "available" ? "🟢 Duty: Online" : "🟡 In Service"}
-                </span>
-              </div>
-
-              <div className="p-2 rounded-lg bg-emerald-950/20 border border-emerald-500/20 flex items-center gap-1.5 text-emerald-300 font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>NCD & Aadhaar Vetted</span>
-              </div>
-            </div>
-
-            {/* Primary Society Details */}
-            <div className="p-3 rounded-xl bg-[#161719] border border-white/5 space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Cooperative Society:</span>
-                <span className="text-white font-medium text-right text-[11px] truncate max-w-[180px]">
-                  {selectedWorker.societyName}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-400">e-Shram Social ID:</span>
-                <span className="text-emerald-400 font-mono text-[11px]">
-                  {selectedWorker.eShramCardNo}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Direct UPI Payout Rail:</span>
-                <span className="text-zinc-300 font-mono text-[11px]">{selectedWorker.upiId}</span>
-              </div>
-            </div>
-
-            {/* Skills */}
-            <div>
-              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block mb-1.5">
-                Certified Skills:
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                  selectedWorker.status === "available"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-amber-100 text-amber-800"
+                }`}
+              >
+                {selectedWorker.status}
               </span>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedWorker.skills.map((skill, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2 py-0.5 rounded-md text-[10px] bg-white/5 text-zinc-300 border border-white/10"
-                  >
-                    {skill}
-                  </span>
-                ))}
+            </div>
+
+            {/* Verification Credentials */}
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="truncate">{selectedWorker.eShramCardNo || "UAN-8890-5012-9901"}</span>
+              </div>
+              <div className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 flex items-center gap-1.5">
+                <Award className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="truncate">{selectedWorker.societyName}</span>
               </div>
             </div>
-          </div>
 
-          {/* Action Button */}
-          <div className="pt-4 border-t border-white/10 mt-4 space-y-2">
-            <button
-              onClick={() => {
-                const targetService =
-                  services.find((s) => s.name.toLowerCase().includes(selectedWorker.trade.toLowerCase().slice(0, 4))) ||
-                  services[0];
-                openBookingModal(targetService);
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-400 text-black hover:from-emerald-400 hover:to-teal-300 transition-all shadow-lg shadow-emerald-500/25 active:scale-95"
-            >
-              <Zap className="w-4 h-4 fill-black" />
-              <span>Book {selectedWorker.name.split(" ")[0]} Directly (92% Payout)</span>
-            </button>
-            <p className="text-[10px] text-zinc-500 text-center">
-              State-mandated fixed rates • Instant UPI split settlement
-            </p>
+            {/* Action CTA */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const s = services.find((srv) => srv.name.toLowerCase().includes(selectedWorker.trade.toLowerCase())) || services[0];
+                  openBookingModal(s);
+                }}
+                className="flex-1 py-2.5 rounded-xl font-bold text-xs btn-glossy-blue text-white shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Book Direct with {selectedWorker.name.split(" ")[0]}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
 };
+
