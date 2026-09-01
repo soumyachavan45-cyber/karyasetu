@@ -1,273 +1,320 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import {
   X,
-  ShieldCheck,
-  CheckCircle2,
-  Lock,
-  ArrowRight,
-  Clock,
   Sparkles,
+  ShieldCheck,
+  Zap,
+  MapPin,
+  Clock,
+  ArrowRight,
   Phone,
   User,
-  Home,
+  CheckCircle2,
   FileText,
-  BadgeIndianRupee,
-  Share2,
+  CreditCard,
+  Building2,
+  QrCode,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
+import { processRazorpayPayment, PaymentInvoice } from "@/lib/razorpay";
+import { sendFCMNotification } from "@/lib/notifications";
+import confetti from "canvas-confetti";
 
 export const JobBookingModal: React.FC = () => {
   const {
     activeBookingModalService,
     closeBookingModal,
     createBooking,
-    language,
     selectedCity,
     setActiveTab,
-    currentUser,
+    setActiveTrackingBooking,
+    setCurrentInvoice,
+    setIsInvoiceOpen,
+    addToast,
   } = useApp();
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [customerName, setCustomerName] = useState(currentUser?.name || "Vikas Deshpande");
-  const [customerPhone, setCustomerPhone] = useState(currentUser?.phone || "+91 98220 11902");
-  const [address, setAddress] = useState(currentUser?.address || "Flat 304, Green Meadows, Dadar, Mumbai");
-  const [timeSlot, setTimeSlot] = useState("Immediate (Next 30 Mins)");
+  const [step, setStep] = useState<1 | 2>(1);
+  const [customerName, setCustomerName] = useState("Vikas Deshpande");
+  const [customerPhone, setCustomerPhone] = useState("+91 98220 11902");
+  const [address, setAddress] = useState("Flat 402, Civil Lines, Nagpur");
   const [notes, setNotes] = useState("");
-  const [confirmedBookingId, setConfirmedBookingId] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   if (!activeBookingModalService) return null;
 
-  const service = activeBookingModalService;
-  const basePrice = service.baseWage;
-  const workerPayout = Number((basePrice * 0.92).toFixed(1));
-  const welfareLocker = Number((basePrice * 0.06).toFixed(1));
-  const adminFund = Number((basePrice * 0.02).toFixed(1));
+  const base = activeBookingModalService.baseWage;
+  const workerPayout = Number((base * 0.92).toFixed(1));
+  const welfareLocker = Number((base * 0.06).toFixed(1));
+  const adminFund = Number((base * 0.02).toFixed(1));
 
-  const handleProceedToPayment = () => {
-    setStep(2);
-  };
+  const handleRazorpayPaymentAndBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsProcessingPayment(true);
 
-  const handleConfirmBooking = async () => {
-    const newBooking = await createBooking(service, {
-      name: customerName,
-      phone: customerPhone,
-      address,
-      notes: notes || `Request for ${service.name} (${timeSlot})`,
-    });
-    setConfirmedBookingId(newBooking.id);
-    setGeneratedOtp(newBooking.otpCode);
-    setStep(3);
-  };
+    try {
+      // 1. Process Razorpay Payment & Tax Invoice
+      const paymentResult = await processRazorpayPayment({
+        amount: base,
+        currency: "INR",
+        orderId: "order_ks_" + Date.now(),
+        customerName,
+        customerPhone,
+        customerEmail: "customer@karyasetu.in",
+        serviceName: activeBookingModalService.name,
+        workerName: "Ramesh Kumar (Certified Wireman)",
+        workerPayout,
+        welfareLocker,
+        adminFund,
+      });
 
-  const handleFinish = () => {
-    closeBookingModal();
-    setStep(1);
+      // 2. Create Booking in SQLite DB & Context
+      const newBooking = await createBooking(activeBookingModalService, {
+        name: customerName,
+        phone: customerPhone,
+        address,
+        notes,
+      });
+
+      // 3. Trigger Firebase Cloud Messaging (FCM) Notification
+      sendFCMNotification(
+        "Payment Settled & Artisan Dispatched! 🚀",
+        `Booking ${newBooking.id} confirmed. 92% (₹${workerPayout}) routed to artisan bank account.`,
+        "payment"
+      );
+
+      // 4. Set Active Tracking and Invoice
+      setCurrentInvoice(paymentResult.invoice);
+      setActiveTrackingBooking({
+        ...newBooking,
+        status: "in_transit",
+        assignedWorker: {
+          id: "w1",
+          workerId: "#4012",
+          name: "Ramesh Kumar",
+          nameHi: "रमेश कुमार",
+          nameMr: "रमेश कुमार",
+          photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+          phone: "+91 98231 44012",
+          trade: "Certified Electrician",
+          tradeHi: "प्रमाणित इलेक्ट्रीशियन",
+          tradeMr: "प्रमाणित इलेक्ट्रिशियन",
+          rating: 4.9,
+          totalJobs: 142,
+          state: "Maharashtra",
+          city: "Nagpur",
+          societyName: "Nagpur Central Labour Co-op (NLCF-78)",
+          societyTier: "Primary Society",
+          verifiedAadhaar: true,
+          verifiedNCD: true,
+          eShramCardNo: "UAN-8890-4412-9901",
+          status: "busy",
+          currentLocation: { lat: 21.1458, lng: 79.0882, area: "Dighori, Nagpur" },
+          todayEarnings: 1240,
+          todayWelfareSaved: 84,
+          upiId: "ramesh.nlcf@upi",
+          skills: ["Wiring", "Fan Installation", "MCB Repair"],
+          languages: ["Hindi", "Marathi", "English"],
+          hasSmartphone: true,
+        },
+      });
+
+      // 5. Confetti effect
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+      } catch (err) {}
+
+      setIsProcessingPayment(false);
+      closeBookingModal();
+
+      // 6. REDIRECT CONSUMER TO LIVE MAP INTERFACE
+      setActiveTab("map");
+
+      addToast(
+        "Redirecting to Live GPS Map! 🗺️",
+        `Tracking artisan to your destination (${address}). Tax invoice ready.`,
+        "success"
+      );
+    } catch (error) {
+      setIsProcessingPayment(false);
+      addToast("Payment Failed", "Please retry Razorpay checkout.", "alert");
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in font-sans">
-      <div className="relative w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in">
+      <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-200 bg-slate-50/80">
           <div className="flex items-center gap-2.5">
-            <span className="text-2xl p-1.5 bg-blue-50 rounded-xl border border-blue-200">
-              {service.icon}
-            </span>
+            <div className="w-9 h-9 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center text-lg shadow-2xs">
+              {activeBookingModalService.icon}
+            </div>
             <div>
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
-                {language === "hi" ? service.nameHi : language === "mr" ? service.nameMr : service.name}
+              <h3 className="text-sm font-extrabold text-slate-900">
+                Book Verified Cooperative Artisan
               </h3>
-              <p className="text-[11px] text-slate-500 font-medium">
-                Regulated Base: ₹{service.baseWage} / {service.unit}
+              <p className="text-[10px] text-slate-500 font-mono font-medium">
+                {activeBookingModalService.name} • {selectedCity}
               </p>
             </div>
           </div>
-
           <button
             onClick={closeBookingModal}
-            className="p-1.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-5 text-xs text-slate-700">
-          
-          {/* STEP 1: Details & Slot */}
-          {step === 1 && (
-            <div className="space-y-4 animate-in fade-in">
-              <div className="relative h-32 w-full rounded-2xl overflow-hidden bg-slate-100 shadow-inner">
-                <img
-                  src={service.imageUrl}
-                  alt={service.name}
-                  className="w-full h-full object-cover"
+        <form onSubmit={handleRazorpayPaymentAndBooking} className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
+          {/* 1. Transparent 92/6/2 Payout Ledger Preview */}
+          <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono text-emerald-800 uppercase tracking-wider font-extrabold">
+                Transparent Payout Rail (Code on Social Security 2020)
+              </span>
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
+                0% SURGE PRICING
+              </span>
+            </div>
+
+            <div className="space-y-1.5 text-[11px]">
+              <div className="flex justify-between text-slate-700 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  92.0% Direct Worker Take-Home (UPI):
+                </span>
+                <strong className="text-emerald-700 font-mono font-bold">{formatINR(workerPayout)}</strong>
+              </div>
+
+              <div className="flex justify-between text-slate-700 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  6.0% e-Shram Pension & Accident Fund:
+                </span>
+                <span className="text-blue-700 font-mono font-bold">{formatINR(welfareLocker)}</span>
+              </div>
+
+              <div className="flex justify-between text-slate-700 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  2.0% Local Cooperative Hub Maintenance:
+                </span>
+                <span className="text-amber-700 font-mono font-bold">{formatINR(adminFund)}</span>
+              </div>
+
+              <div className="pt-2 border-t border-emerald-200 flex justify-between text-xs font-bold text-slate-900">
+                <span>Total Fixed Wage (No Surge / No Middleman):</span>
+                <span className="text-emerald-700 font-mono text-sm font-black">{formatINR(base)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Customer Contact & Delivery Info */}
+          <div className="space-y-3">
+            <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
+              Customer Details & Service Destination
+            </h4>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1 text-[11px]">
+                Your Full Name
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  required
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="e.g. Vikas Deshpande"
+                  className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 text-xs font-medium"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent" />
-                <div className="absolute bottom-2.5 left-3 text-white">
-                  <span className="text-[10px] font-mono uppercase bg-blue-600 px-2 py-0.5 rounded font-bold">
-                    {service.category}
-                  </span>
-                  <p className="text-xs font-semibold mt-0.5 drop-shadow">{service.description}</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Your Full Name</label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 font-medium"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Contact Mobile (For Direct OTP)</label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Service Delivery Address ({selectedCity})</label>
-                <div className="relative">
-                  <Home className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 font-medium"
-                    required
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={handleProceedToPayment}
-                className="w-full py-3 rounded-xl font-bold btn-glossy-blue text-white shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all"
-              >
-                <span>View Transparent Split & Proceed</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {/* STEP 2: Transparent 92/6/2 Invoice */}
-          {step === 2 && (
-            <div className="space-y-4 animate-in fade-in">
-              <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 space-y-2">
-                <span className="text-[10px] uppercase font-bold text-blue-900 tracking-wider block">
-                  Statutory Fair Wage Invoice
-                </span>
-                <div className="flex items-center justify-between text-base font-extrabold text-slate-900">
-                  <span>Total Amount Payable:</span>
-                  <span className="font-mono text-xl text-blue-600">₹{basePrice}</span>
-                </div>
-              </div>
-
-              <div className="space-y-2 font-mono text-xs">
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-center justify-between">
-                  <div>
-                    <strong>₹{workerPayout} (92%)</strong>
-                    <span className="block text-[10px] text-emerald-700 font-sans">
-                      Direct Worker UPI Take-Home (Zero cut)
-                    </span>
-                  </div>
-                  <span className="text-lg">🛠️</span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 flex items-center justify-between">
-                  <div>
-                    <strong>₹{welfareLocker} (6%)</strong>
-                    <span className="block text-[10px] text-blue-700 font-sans">
-                      e-Shram PMSBY Accident + Retirement Pension
-                    </span>
-                  </div>
-                  <span className="text-lg">🛡️</span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 flex items-center justify-between">
-                  <div>
-                    <strong>₹{adminFund} (2%)</strong>
-                    <span className="block text-[10px] text-amber-700 font-sans">
-                      Co-op Labour Felicitation Tool Library Maintenance
-                    </span>
-                  </div>
-                  <span className="text-lg">🏢</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <button
-                  onClick={() => setStep(1)}
-                  className="py-2.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleConfirmBooking}
-                  className="py-2.5 rounded-xl font-bold btn-glossy-green text-white shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Dispatch Artisan</span>
-                </button>
               </div>
             </div>
-          )}
 
-          {/* STEP 3: Order Confirmed with OTP */}
-          {step === 3 && (
-            <div className="space-y-5 text-center py-2 animate-in zoom-in-95">
-              <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-2xl shadow-sm border border-emerald-200">
-                <CheckCircle2 className="w-8 h-8" />
+            <div>
+              <label className="block text-slate-700 font-bold mb-1 text-[11px]">
+                Contact Mobile Number (for 4-Digit Job OTP)
+              </label>
+              <div className="relative">
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  required
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="+91 98220 11902"
+                  className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 text-xs font-mono font-medium"
+                />
               </div>
-
-              <div className="space-y-1">
-                <h4 className="text-lg font-extrabold text-slate-900">Artisan Dispatched!</h4>
-                <p className="text-xs text-slate-600">
-                  Your request has been routed to verified cooperatives in {selectedCity}.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                  Provide this OTP to artisan upon arrival:
-                </span>
-                <div className="text-3xl font-black font-mono tracking-widest text-blue-600">
-                  {generatedOtp}
-                </div>
-                <span className="text-[10px] text-slate-500 block font-mono">
-                  Booking ID: #{confirmedBookingId}
-                </span>
-              </div>
-
-              <button
-                onClick={handleFinish}
-                className="w-full py-3 rounded-xl font-bold btn-glossy-blue text-white shadow-md active:scale-95 transition-all"
-              >
-                Close & Track in Account
-              </button>
             </div>
-          )}
-        </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1 text-[11px]">
+                Service Address / Destination Location
+              </label>
+              <div className="relative">
+                <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Flat No, Building, Street, Area"
+                  className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 text-xs font-medium"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1 text-[11px]">
+                Specific Fault / Job Instructions (Optional)
+              </label>
+              <textarea
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g. Ceiling fan humming sound, switch board burning smell..."
+                className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 font-medium"
+              />
+            </div>
+          </div>
+
+          {/* 3. Razorpay Payment Gateway & Checkout Button */}
+          <div className="pt-2 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-600">
+              <span className="flex items-center gap-1 font-medium">
+                <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                Razorpay Sovereign UPI & Card Gateway
+              </span>
+              <span className="font-mono text-emerald-700 font-bold">Instant GST Invoice</span>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isProcessingPayment}
+              className="w-full py-3.5 rounded-2xl font-extrabold btn-glossy-blue text-white shadow-md flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 text-xs"
+            >
+              <span>
+                {isProcessingPayment
+                  ? "Processing Razorpay UPI Payment..."
+                  : `Pay ${formatINR(base)} via Razorpay & Track Live`}
+              </span>
+              <ArrowRight className="w-4 h-4 stroke-[3]" />
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
 };
+

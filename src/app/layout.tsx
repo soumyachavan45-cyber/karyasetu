@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
-import { Navbar } from "@/components/Navbar";
-import { ToastContainer } from "@/components/ToastContainer";
-import { JobBookingModal } from "@/components/JobBookingModal";
-import { VoiceAssistantModal } from "@/components/VoiceAssistantModal";
-import { PricingMatrixModal } from "@/components/PricingMatrixModal";
-import { BottomNav } from "@/components/BottomNav";
+import { AppModalsAndNav } from "@/components/AppModalsAndNav";
 
 export const metadata: Metadata = {
-  title: "KaryaSetu 🇮🇳 | कार्यसेतु - Connecting Artisans Directly to Households",
+  title: "KaryaSetu 🇮🇳 | कार्यसेतु - India's Sovereign Cooperative Workforce Platform",
   description:
     "A decentralized, state-backed, cooperative-owned digital public marketplace that formalizes India's blue-collar workforce with 92% direct payouts and automated e-Shram social security.",
 };
@@ -29,7 +24,7 @@ export default function RootLayout({
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossOrigin=""
         />
-        {/* Google Fonts: Inter & Noto Sans Devanagari */}
+        {/* Google Fonts: Inter, JetBrains Mono & Noto Sans Devanagari */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
@@ -37,22 +32,12 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-transparent text-slate-900 min-h-screen antialiased">
+      <body className="bg-[#E2EEFC] text-[#1E293B] min-h-screen antialiased selection:bg-blue-600 selection:text-white">
+        <div className="fixed-india-bg" />
         <AppProvider>
-          {/* Full-Screen Fixed India Map Atmospheric Background */}
-          <div className="fixed-india-bg" aria-hidden="true" />
-          
-          <Navbar />
-          <main className="min-h-[calc(100vh-4rem)]">{children}</main>
-          <BottomNav />
-          <ToastContainer />
-          <JobBookingModal />
-          <VoiceAssistantModal />
-          <PricingMatrixModal />
+          <AppModalsAndNav>{children}</AppModalsAndNav>
         </AppProvider>
       </body>
-
     </html>
   );
 }
-

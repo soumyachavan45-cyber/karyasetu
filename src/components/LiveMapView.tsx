@@ -3,247 +3,375 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useApp } from "@/context/AppContext";
 import { Worker } from "@/data/mockData";
-import { INDIA_CITIES } from "@/data/mockData";
 import {
   MapPin,
-  ShieldCheck,
-  Star,
-  Zap,
+  Navigation,
   Phone,
-  CheckCircle2,
-  Sparkles,
+  ShieldCheck,
+  Zap,
+  Clock,
   Layers,
-  Award,
+  Sparkles,
+  User,
+  ArrowRight,
+  MessageSquare,
+  BadgeIndianRupee,
 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 
 export const LiveMapView: React.FC = () => {
-  const { workers, services, openBookingModal, selectedCity, setSelectedCity, language } = useApp();
+  const {
+    workers,
+    bookings,
+    selectedCity,
+    currentWorker,
+    activeTrackingBooking,
+    openBookingModal,
+    services,
+    setIsChatOpen,
+  } = useApp();
 
-  const [selectedWorker, setSelectedWorker] = useState<Worker | null>(workers[0]);
-  const [activeFilter, setActiveFilter] = useState<string>("all");
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const leafletMapRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const mapInstanceRef = useRef<any>(null);
+  const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
+  const [etaMinutes, setEtaMinutes] = useState(12);
+  const [distanceKm, setDistanceKm] = useState(2.1);
+  const [sortedWorkers, setSortedWorkers] = useState<Worker[]>([]);
 
-  // Filtered workers
-  const filteredWorkers = workers.filter((w) => {
-    if (activeFilter === "all") return true;
-    if (activeFilter === "available") return w.status === "available";
-    if (activeFilter === "busy") return w.status === "busy";
-    return true;
-  });
-
-  // Initialize Leaflet map dynamically
+  // Calculate sorted workers based on proximity
   useEffect(() => {
-    if (typeof window === "undefined" || !mapContainerRef.current) return;
+    const sorted = [...workers].sort((a, b) => {
+      // Prioritize available workers
+      if (a.status === "available" && b.status !== "available") return -1;
+      if (b.status === "available" && a.status !== "available") return 1;
+      return b.rating - a.rating;
+    });
+    setSortedWorkers(sorted);
+  }, [workers]);
 
+  // ETA countdown simulator for active tracking
+  useEffect(() => {
+    if (activeTrackingBooking) {
+      const interval = setInterval(() => {
+        setEtaMinutes((prev) => (prev > 1 ? prev - 1 : 1));
+        setDistanceKm((prev) => (prev > 0.2 ? Number((prev - 0.2).toFixed(1)) : 0.2));
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTrackingBooking]);
+
+  // Initialize Leaflet Map on Client Side
+  useEffect(() => {
     let isMounted = true;
 
-    const initLeaflet = async () => {
+    const initLeafletMap = async () => {
+      if (typeof window === "undefined" || !mapContainerRef.current) return;
+
       const L = (await import("leaflet")).default;
 
-      if (!isMounted || !mapContainerRef.current) return;
-
-      // Find current selected city coordinates or fallback to Center of India (Nagpur/Mumbai)
-      const currentCityObj = INDIA_CITIES.find((c) => selectedCity.includes(c.name)) || INDIA_CITIES[0];
-      const centerLat = currentCityObj.lat || 19.0760;
-      const centerLng = currentCityObj.lng || 72.8777;
-
-      if (!leafletMapRef.current) {
-        // Destroy any leftover instance
-        const container = mapContainerRef.current as any;
-        if (container._leaflet_id) {
-          container._leaflet_id = null;
-        }
-
-        const map = L.map(mapContainerRef.current, {
-          center: [centerLat, centerLng],
-          zoom: 11,
-          zoomControl: true,
-        });
-
-        // CartoDB Voyager Light map tiles
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-          attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
-          subdomains: "abcd",
-          maxZoom: 19,
-        }).addTo(map);
-
-        leafletMapRef.current = map;
-      } else {
-        leafletMapRef.current.setView([centerLat, centerLng], 11);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
       }
 
-      const map = leafletMapRef.current;
+      const defaultCenter: [number, number] = [21.1458, 79.0882]; // Nagpur center
 
-      // Clear previous markers
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-
-      // Add City Hub Markers for all major Indian cities
-      INDIA_CITIES.forEach((city) => {
-        const cityIcon = L.divIcon({
-          className: "custom-city-marker",
-          html: `
-            <div style="background:#2563EB; color:white; padding:4px 8px; border-radius:12px; font-size:10px; font-weight:800; border:2px solid white; box-shadow:0 4px 10px rgba(37,99,235,0.3); white-space:nowrap; display:flex; align-items:center; gap:4px;">
-              <span>📍 ${city.name}</span>
-              <span style="background:rgba(255,255,255,0.25); padding:1px 4px; border-radius:8px; font-size:9px;">${city.activeArtisans}</span>
-            </div>
-          `,
-          iconSize: [80, 24],
-          iconAnchor: [40, 12],
-        });
-
-        const m = L.marker([city.lat, city.lng], { icon: cityIcon })
-          .addTo(map)
-          .on("click", () => {
-            setSelectedCity(`${city.name}, ${city.state}`);
-            map.flyTo([city.lat, city.lng], 12);
-          });
-
-        markersRef.current.push(m);
+      const map = L.map(mapContainerRef.current, {
+        center: defaultCenter,
+        zoom: 13,
+        zoomControl: false,
       });
 
-      // Add Worker Markers
-      filteredWorkers.forEach((worker) => {
-        const isSelected = selectedWorker?.id === worker.id;
-        const iconColor = worker.status === "available" ? "#16A34A" : "#D97706";
+      // Light mode tile layer (CartoDB Voyager)
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        {
+          attribution: '&copy; <a href="https://carto.com/">CARTO</a> | ISRO Bhuvan Radar',
+          subdomains: "abcd",
+          maxZoom: 19,
+        }
+      ).addTo(map);
+
+      // Consumer Destination Pin (if active tracking)
+      const consumerLat = 21.1558;
+      const consumerLng = 79.0982;
+
+      const consumerIcon = L.divIcon({
+        className: "custom-consumer-icon",
+        html: `
+          <div class="relative flex items-center justify-center">
+            <div class="w-8 h-8 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center text-white shadow-lg animate-pulse">
+              <span class="text-xs">📍</span>
+            </div>
+            <div class="absolute -bottom-5 whitespace-nowrap bg-blue-900 text-white font-sans font-bold text-[9px] px-1.5 py-0.5 rounded shadow-sm">
+              Your Destination
+            </div>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+
+      L.marker([consumerLat, consumerLng], { icon: consumerIcon }).addTo(map);
+
+      // Worker markers
+      workers.forEach((w) => {
+        const isAvailable = w.status === "available";
+        const isBusy = w.status === "busy";
+        const pinColor = isAvailable ? "#16A34A" : isBusy ? "#E67E22" : "#94A3B8";
 
         const workerIcon = L.divIcon({
-          className: "custom-worker-marker",
+          className: "custom-worker-icon",
           html: `
-            <div style="position:relative; width:36px; height:36px; border-radius:50%; border:2.5px solid white; background:${iconColor}; box-shadow:0 4px 14px rgba(0,0,0,0.2); overflow:hidden; cursor:pointer; transform:${isSelected ? "scale(1.2)" : "scale(1)"}; transition:transform 0.2s;">
-              <img src="${worker.photoUrl}" style="width:100%; height:100%; object-fit:cover;" />
+            <div class="relative group cursor-pointer">
+              <div style="background-color: ${pinColor}; box-shadow: 0 0 12px ${pinColor};" 
+                   class="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-white font-bold text-xs transform transition-transform hover:scale-125">
+                ⚡
+              </div>
+              <div class="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-900 text-white font-sans text-[10px] px-2 py-0.5 rounded shadow-md whitespace-nowrap z-50">
+                ${w.name} (${w.trade})
+              </div>
             </div>
           `,
-          iconSize: [36, 36],
-          iconAnchor: [18, 18],
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
         });
 
-        const marker = L.marker([worker.currentLocation.lat, worker.currentLocation.lng], { icon: workerIcon })
-          .addTo(map)
-          .on("click", () => {
-            setSelectedWorker(worker);
-            map.panTo([worker.currentLocation.lat, worker.currentLocation.lng]);
-          });
+        const marker = L.marker([w.currentLocation.lat, w.currentLocation.lng], {
+          icon: workerIcon,
+        }).addTo(map);
 
-        markersRef.current.push(marker);
+        marker.on("click", () => {
+          setSelectedWorker(w);
+        });
       });
+
+      // If active tracking booking, draw animated route polyline
+      if (activeTrackingBooking) {
+        const workerCoord: [number, number] = [21.1458, 79.0882];
+        const destCoord: [number, number] = [consumerLat, consumerLng];
+
+        const polyline = L.polyline([workerCoord, destCoord], {
+          color: "#2563EB",
+          weight: 4,
+          opacity: 0.8,
+          dashArray: "8, 8",
+        }).addTo(map);
+
+        map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+      }
+
+      mapInstanceRef.current = map;
     };
 
-    initLeaflet();
+    initLeafletMap();
 
     return () => {
-      isMounted = false;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
-  }, [selectedCity, filteredWorkers, selectedWorker]);
+  }, [workers, activeTrackingBooking]);
 
   return (
-    <div className="relative w-full h-[calc(100vh-4rem)] bg-slate-100 overflow-hidden font-sans">
-      {/* Leaflet Map Canvas */}
-      <div ref={mapContainerRef} className="w-full h-full z-0" />
-
-      {/* Top Floating Filter Bar */}
-      <div className="absolute top-4 left-4 right-4 sm:left-6 sm:right-auto z-10 flex flex-wrap items-center gap-2">
-        <div className="glass-panel px-3.5 py-2 rounded-2xl border border-white/90 shadow-glass flex items-center gap-2 text-xs font-bold text-slate-800">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>India-Wide Artisan Presence</span>
-          <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full font-mono font-bold">
-            {INDIA_CITIES.length} Cities Active
-          </span>
-        </div>
-
-        <div className="glass-panel p-1 rounded-2xl border border-white/90 shadow-glass flex items-center gap-1 text-xs">
-          {[
-            { id: "all", label: "All Active" },
-            { id: "available", label: "Ready to Dispatch 🟢" },
-            { id: "busy", label: "On Job 🟠" },
-          ].map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setActiveFilter(f.id)}
-              className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs ${
-                activeFilter === f.id
-                  ? "btn-glossy-blue text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Bottom Floating Worker Profile Card */}
-      {selectedWorker && (
-        <div className="absolute bottom-6 left-4 right-4 sm:left-6 sm:max-w-md z-10 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="glass-panel p-5 rounded-3xl border border-white/95 shadow-2xl bg-white/95 backdrop-blur-xl space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <img
-                  src={selectedWorker.photoUrl}
-                  alt={selectedWorker.name}
-                  className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-md"
-                />
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="font-extrabold text-slate-900 text-base">
-                      {selectedWorker.name}
-                    </h3>
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800">
-                      ★ {selectedWorker.rating}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 font-medium">
-                    {selectedWorker.trade} • {selectedWorker.experienceYears || 8} Years Exp
-                  </p>
-                  <p className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 mt-0.5">
-                    <MapPin className="w-3 h-3" />
-                    <span>{selectedWorker.currentLocation.area}</span>
-                  </p>
-                </div>
-              </div>
-
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
-                  selectedWorker.status === "available"
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-amber-100 text-amber-800"
-                }`}
-              >
-                {selectedWorker.status}
+    <div className="relative w-full h-[calc(100vh-4rem)] bg-[#E2EEFC] overflow-hidden flex flex-col md:flex-row font-sans">
+      {/* 1. Left Sidebar: Active Tracking Status & Nearby Sorted Workers */}
+      <div className="w-full md:w-96 bg-white/95 backdrop-blur-xl border-r border-slate-200/90 flex flex-col z-10 overflow-y-auto max-h-[45vh] md:max-h-full shadow-lg">
+        {/* Active En-Route Tracking Card (If Booking is in Transit) */}
+        {activeTrackingBooking && (
+          <div className="p-4 bg-gradient-to-br from-emerald-50 via-white to-teal-50 border-b border-emerald-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                LIVE GPS EN-ROUTE
+              </span>
+              <span className="text-xs font-mono text-slate-600 font-bold">
+                OTP: <strong className="text-blue-600">{activeTrackingBooking.otpCode}</strong>
               </span>
             </div>
 
-            {/* Verification Credentials */}
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="truncate">{selectedWorker.eShramCardNo || "UAN-8890-5012-9901"}</span>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  {activeTrackingBooking.serviceName}
+                </h3>
+                <p className="text-xs text-slate-600">
+                  Artisan:{" "}
+                  <strong className="text-emerald-700">
+                    {activeTrackingBooking.assignedWorker?.name || "Ramesh Kumar"}
+                  </strong>
+                </p>
               </div>
-              <div className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 flex items-center gap-1.5">
-                <Award className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span className="truncate">{selectedWorker.societyName}</span>
+
+              <div className="text-right">
+                <span className="text-xl font-black font-mono text-emerald-700">
+                  {etaMinutes} min
+                </span>
+                <p className="text-[10px] text-slate-500 font-mono font-semibold">{distanceKm} km away</p>
               </div>
             </div>
 
-            {/* Action CTA */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={() => setIsChatOpen(true)}
+                className="py-2 px-3 rounded-xl btn-glossy-green text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Chat / Message</span>
+              </button>
+
+              <a
+                href={`tel:${activeTrackingBooking.assignedWorker?.phone || "+919823144012"}`}
+                className="py-2 px-3 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+              >
+                <Phone className="w-3.5 h-3.5 text-blue-600" />
+                <span>Direct Call</span>
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Proximity Sorted Worker List Header */}
+        <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/80 flex items-center justify-between">
+          <div>
+            <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
+              Active Nearby Guild Artisans
+            </h4>
+            <p className="text-[10px] text-slate-500 font-medium">
+              Sorted by GPS Proximity to {selectedCity}
+            </p>
+          </div>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            {workers.filter((w) => w.status === "available").length} Active
+          </span>
+        </div>
+
+        {/* Worker Cards Stream */}
+        <div className="flex-1 divide-y divide-slate-100 overflow-y-auto">
+          {sortedWorkers.map((w, index) => {
+            const isSelected = selectedWorker?.id === w.id;
+            return (
+              <div
+                key={w.id}
+                onClick={() => setSelectedWorker(w)}
+                className={`p-3.5 hover:bg-slate-50 cursor-pointer transition-all space-y-2 ${
+                  isSelected ? "bg-blue-50/80 border-l-4 border-blue-600" : ""
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center font-bold text-blue-700 text-xs shadow-2xs">
+                      {w.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                        <span>{w.name}</span>
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      </h5>
+                      <p className="text-[11px] text-slate-600 font-medium">{w.trade}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span
+                      className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                        w.status === "available"
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {w.status}
+                    </span>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5 font-semibold">
+                      {(0.8 + index * 0.5).toFixed(1)} km away
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                  <span>⭐ {w.rating} ({w.totalJobs} jobs)</span>
+                  <span className="truncate max-w-[140px] text-slate-600">{w.societyName}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. Right Area: Live Leaflet Interactive Map View */}
+      <div className="flex-1 relative h-full">
+        {/* Map Container */}
+        <div ref={mapContainerRef} className="w-full h-full z-0" />
+
+        {/* Map Overlays */}
+        <div className="absolute top-4 left-4 z-20 pointer-events-none">
+          <div className="px-3.5 py-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 text-xs shadow-md flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            <span className="text-slate-800 font-semibold text-[11px]">
+              ISRO Bhuvan Radar: <strong className="text-blue-600 font-bold">{selectedCity}</strong>
+            </span>
+          </div>
+        </div>
+
+        {/* Selected Worker Floating Drawer (On Map) */}
+        {selectedWorker && (
+          <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 glass-panel bg-white/95 backdrop-blur-xl border border-white/90 rounded-3xl p-4 shadow-2xl z-20 space-y-3 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                  <span>{selectedWorker.name}</span>
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                </h4>
+                <p className="text-xs text-blue-700 font-semibold">
+                  {selectedWorker.trade} • {selectedWorker.societyTier}
+                </p>
+                <p className="text-[10px] font-mono text-slate-500">
+                  {selectedWorker.eShramCardNo}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setSelectedWorker(null)}
+                className="text-slate-400 hover:text-slate-800 text-xs p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+              <div>
+                <span className="text-slate-400 block text-[9px] uppercase font-bold">Rating</span>
+                <strong className="text-amber-600 font-mono font-bold">⭐ {selectedWorker.rating} / 5.0</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[9px] uppercase font-bold">Completed Jobs</span>
+                <strong className="text-slate-900 font-mono font-bold">{selectedWorker.totalJobs} Works</strong>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
-                  const s = services.find((srv) => srv.name.toLowerCase().includes(selectedWorker.trade.toLowerCase())) || services[0];
+                  const s = services[0];
                   openBookingModal(s);
                 }}
-                className="flex-1 py-2.5 rounded-xl font-bold text-xs btn-glossy-blue text-white shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 py-2 px-3 rounded-xl btn-glossy-blue text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1 active:scale-95"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Book Direct with {selectedWorker.name.split(" ")[0]}</span>
+                <span>Instant Dispatch</span>
               </button>
+
+              <a
+                href={`tel:${selectedWorker.phone}`}
+                className="p-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-emerald-600 shadow-2xs"
+                title={`Call ${selectedWorker.phone}`}
+              >
+                <Phone className="w-4 h-4" />
+              </a>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

@@ -43,7 +43,7 @@ export const KaryaSetuLogo: React.FC<LogoProps> = ({
     >
       {/* House + Bridge Emblem matching reference design */}
       <div
-        className={`${iconSizes[size]} relative rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-sky-600 p-0.5 flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-all duration-300`}
+        className={`${iconSizes[size]} shrink-0 relative rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-sky-600 p-0.5 flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-all duration-300`}
       >
         <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center relative overflow-hidden">
           <svg
@@ -74,7 +74,7 @@ export const KaryaSetuLogo: React.FC<LogoProps> = ({
       </div>
 
       {/* Typography */}
-      <div className="flex flex-col">
+      <div className="flex flex-col shrink-0">
         <div className="flex items-center gap-1.5 leading-none">
           <span
             className={`${textSizes[size]} tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors flex items-center gap-1 font-sans`}
@@ -85,7 +85,7 @@ export const KaryaSetuLogo: React.FC<LogoProps> = ({
         </div>
 
         {showTagline && (
-          <div className="flex items-center gap-1.5 mt-0.5">
+          <div className="hidden sm:flex items-center gap-1.5 mt-0.5">
             <span
               className={`${devanagariSizes[size]} font-semibold text-emerald-700 font-devanagari tracking-wide`}
             >
@@ -97,6 +97,7 @@ export const KaryaSetuLogo: React.FC<LogoProps> = ({
           </div>
         )}
       </div>
+
     </div>
   );
 };

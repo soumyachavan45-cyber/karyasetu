@@ -12,16 +12,36 @@
     --accent-orange: #E67E22;
   }
 
+  html,
   body {
     background-color: #E2EEFC;
     color: #1E293B;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
     min-height: 100vh;
-    selection-background-color: #2563EB;
-    selection-color: #FFFFFF;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
   }
 }
+
+/* Hide scrollbar for clean horizontal swipe containers on mobile */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+
 
 /* Full-Screen Fixed India Map Ambient Background Layer */
 .fixed-india-bg {
